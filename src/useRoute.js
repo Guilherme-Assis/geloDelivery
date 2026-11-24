@@ -4,8 +4,10 @@ import { BackHandler, Platform } from 'react-native';
 const web = Platform.OS === 'web';
 
 function readWebRoute() {
+  const params = new URLSearchParams(window.location.search);
   return {
-    slug: new URLSearchParams(window.location.search).get('sabor'),
+    admin: params.get('admin') === '1',
+    slug: params.get('sabor'),
     catalog: window.location.hash === '#sabores'
   };
 }
@@ -13,7 +15,7 @@ function readWebRoute() {
 export const productHref = slug => '?sabor=' + encodeURIComponent(slug);
 
 export function useRoute() {
-  const [route, setRoute] = useState(() => web ? readWebRoute() : { slug: null, catalog: false });
+  const [route, setRoute] = useState(() => web ? readWebRoute() : { slug: null, catalog: false, admin: false });
 
   useEffect(() => {
     if (web) {
@@ -27,22 +29,22 @@ export function useRoute() {
     }
 
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (!route.slug) return false;
-      setRoute({ slug: null, catalog: true });
+      if (!route.slug && !route.admin) return false;
+      setRoute({ slug: null, catalog: Boolean(route.slug), admin: false });
       return true;
     });
     return () => subscription.remove();
-  }, [route.slug]);
+  }, [route.slug, route.admin]);
 
-  function navigate(slug, catalog = false) {
+  function navigate(slug, catalog = false, admin = false) {
     if (web) {
-      const suffix = slug ? productHref(slug) : catalog ? '#sabores' : '';
+      const suffix = admin ? '?admin=1' : slug ? productHref(slug) : catalog ? '#sabores' : '';
       const url = window.location.pathname + suffix;
       if (url !== window.location.pathname + window.location.search + window.location.hash) {
         window.history.pushState(null, '', url);
       }
     }
-    setRoute({ slug, catalog });
+    setRoute({ slug, catalog, admin });
   }
 
   return { route, navigate };

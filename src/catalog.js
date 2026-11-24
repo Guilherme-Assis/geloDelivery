@@ -1,10 +1,10 @@
-const supabaseUrl = 'https://ziacmlaeuzsolillqkka.supabase.co';
-const publishableKey = 'sb_publishable_BpvDosVttxtm5UPXepQ6lw_sKBKjXUj';
+export const supabaseUrl = 'https://ziacmlaeuzsolillqkka.supabase.co';
+export const publishableKey = 'sb_publishable_BpvDosVttxtm5UPXepQ6lw_sKBKjXUj';
 export const mediaUrl = `${supabaseUrl}/storage/v1/object/public/produtos/`;
 
 export const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-function encodePath(path) {
+export function encodePath(path) {
   if (!path) return '';
   const parts = path.split('/');
   if (parts.some(part => !part || part === '.' || part === '..')) return '';

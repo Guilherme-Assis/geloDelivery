@@ -7,6 +7,7 @@ import {
   ScrollView, Text, View, useWindowDimensions
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import AdminScreen from './admin/AdminScreen';
 import { loadFlavors, slugPattern } from './catalog';
 import ModelPreview from './ModelPreview';
 import { palette, styles } from './styles';
@@ -320,6 +321,7 @@ function Storefront() {
   const data = result?.slug === route.slug && result?.attempt === attempt ? result : null;
 
   useEffect(() => {
+    if (route.admin) return;
     const slug = route.slug;
     if (slug && !slugPattern.test(slug)) {
       setResult({ slug, attempt, flavors: [] });
@@ -337,15 +339,20 @@ function Storefront() {
       clearTimeout(timeout);
       controller.abort();
     };
-  }, [route.slug, attempt]);
+  }, [route.slug, route.admin, attempt]);
 
   useEffect(() => {
     if (!web) return;
+    if (route.admin) {
+      document.title = 'Administração — JogGelo';
+      return;
+    }
     const name = data?.flavors?.[0]?.name;
     document.title = route.slug && data && !data.error ? (name || 'Sabor não encontrado') + ' — JogGelo' : homeTitle;
-  }, [route.slug, data]);
+  }, [route.slug, route.admin, data]);
 
   useEffect(() => {
+    if (route.admin) return;
     if (!route.slug && route.catalog && catalogTop === null) return;
     const frame = requestAnimationFrame(() => {
       scroll.current?.scrollTo({ y: !route.slug && route.catalog ? catalogTop : 0, animated: false });
@@ -355,6 +362,7 @@ function Storefront() {
 
   const goHome = () => navigate(null);
   const goCatalog = () => navigate(null, true);
+  if (route.admin) return <AdminScreen goHome={goHome} />;
   const flavors = data?.flavors || [];
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -389,6 +397,7 @@ function Storefront() {
             <Brand goHome={goHome} footer />
             <Link href={instagram} accessibilityLabel="JogGelo no Instagram"><Text style={styles.actionText}>@joggelo</Text></Link>
             <Link href="./#sabores" action={goCatalog}><Text style={styles.navText}>Todos os sabores</Text></Link>
+            <Link href="./?admin=1" action={() => navigate(null, false, true)}><Text style={styles.navText}>Administração</Text></Link>
           </View>
         </View>
       </ScrollView>
