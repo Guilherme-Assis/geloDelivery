@@ -15,6 +15,8 @@ import CheckoutScreen from './checkout/CheckoutScreen';
 import Link from './Link';
 import { loadFlavors, slugPattern } from './catalog';
 import ModelPreview from './ModelPreview';
+import ProductPrice, { OfferTag } from './ProductPrice';
+import { hasPrice, isOnOffer } from './pricing';
 import { palette, styles } from './styles';
 import { cartHref, productHref, useRoute } from './useRoute';
 
@@ -220,17 +222,21 @@ function FlavorCard({ flavor, cardWidth, wide, open, cart }) {
       <Link href={productHref(flavor.id)} action={open} style={styles.cardDetails}>
         <View style={[styles.cardArt, { height: wide ? 185 : Math.min(210, Math.max(110, cardWidth * 0.72)) }]}>
           <View style={[styles.cardOrbit, { borderColor: flavor.color }]} />
+          {isOnOffer(flavor) && <View style={styles.cardOffer}><OfferTag /></View>}
           {flavor.imageUrl && <Image source={{ uri: flavor.imageUrl }} style={styles.cardPackage} resizeMode="contain" />}
         </View>
         <View style={styles.cardContent}>
           <Text accessibilityRole="header" aria-level={3} style={styles.cardTitle}>{flavor.name}</Text>
           <Text style={styles.cardSummary}>{flavor.summary}</Text>
+          <View style={styles.cardPrice}><ProductPrice flavor={flavor} /></View>
           <Text style={styles.cardLink}>Ver detalhes</Text>
         </View>
       </Link>
-      <View style={styles.cardActions}>
-        <AddToCart flavor={flavor} cart={cart} compact={cardWidth < 195} />
-      </View>
+      {hasPrice(flavor) && (
+        <View style={styles.cardActions}>
+          <AddToCart flavor={flavor} cart={cart} compact={cardWidth < 195} />
+        </View>
+      )}
     </View>
   );
 }
@@ -276,7 +282,8 @@ function Detail({ flavor, goCatalog, loading, error, retry, wide, width, wrap, c
               <Eyebrow>GELO SABORIZADO</Eyebrow>
               <Text accessibilityRole="header" aria-level={1} style={styles.sectionHeading}>{flavor.name}</Text>
               <Text style={styles.detailDescription}>{flavor.description}</Text>
-              <AddToCart flavor={flavor} cart={cart} />
+              <ProductPrice flavor={flavor} featured />
+              {hasPrice(flavor) && <AddToCart flavor={flavor} cart={cart} />}
               {flavor.pairings.length > 0 && (
                 <View style={styles.pairings}>
                   <Text accessibilityRole="header" aria-level={2} style={styles.pairingsHeading}>Experimente com</Text>
@@ -378,7 +385,7 @@ function Storefront() {
       <ScrollView ref={scroll} keyboardShouldPersistTaps="handled" stickyHeaderIndices={[0]} style={styles.page} contentContainerStyle={styles.pageContent}>
         <Header wide={wide} wrap={wrap} route={route} cart={cart} goHome={goHome} goCatalog={goCatalog} goCart={goCart} />
         {route.checkout ? (
-          <CheckoutScreen cart={cart} flavors={flavors} wrap={wrap} wide={wide} goCart={goCart} goCatalog={goCatalog} />
+          <CheckoutScreen cart={cart} flavors={flavors} verified={Boolean(data && !data.error)} loadError={data?.error} wrap={wrap} wide={wide} goCart={goCart} goCatalog={goCatalog} />
         ) : route.cart ? (
           <CartScreen cart={cart} flavors={flavors} verified={Boolean(data && !data.error)} error={data?.error}
             retry={retry} wrap={wrap} wide={wide} goCatalog={goCatalog} openProduct={slug => navigate('product', slug)} goCheckout={goCheckout} />

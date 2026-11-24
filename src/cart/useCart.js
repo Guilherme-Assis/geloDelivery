@@ -95,7 +95,7 @@ export function useCart() {
       const existing = current.find(item => item.id === flavor.productId);
       const item = {
         id: flavor.productId, slug: flavor.id, name: flavor.name, imageUrl: flavor.imageUrl,
-        quantity: Math.min((existing?.quantity || 0) + 1, Number.MAX_SAFE_INTEGER)
+        quantity: Math.min((existing?.quantity || 0) + 1, 2147483647)
       };
       return existing ? current.map(saved => saved.id === item.id ? item : saved) : [...current, item];
     });
@@ -103,7 +103,7 @@ export function useCart() {
 
   function adjust(id, delta) {
     change(current => current.map(item => item.id === id
-      ? { ...item, quantity: Math.min(Number.MAX_SAFE_INTEGER, Math.max(1, item.quantity + delta)) }
+      ? { ...item, quantity: Math.min(2147483647, Math.max(1, item.quantity + delta)) }
       : item));
   }
 

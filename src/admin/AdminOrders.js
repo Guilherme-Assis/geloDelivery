@@ -2,6 +2,7 @@ import ClipboardList from 'lucide-react-native/icons/clipboard-list';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { orderCode, orderStatuses, paymentMethods } from '../checkout/orders';
+import { formatCurrency } from '../money';
 import { supabase } from './data';
 import { Button, Notice, ink, ui } from './ui';
 
@@ -30,7 +31,7 @@ function OrderDetail({ id, back }) {
 
   useEffect(() => {
     let current = true;
-    supabase.from('pedidos').select('id,criado_em,nome,telefone,documento,forma_pagamento,cidade,bairro,rua,numero,complemento,itens,status')
+    supabase.from('pedidos').select('id,criado_em,nome,telefone,documento,forma_pagamento,cidade,bairro,rua,numero,complemento,itens,status,total_centavos')
       .eq('id', id).maybeSingle().then(({ data, error }) => {
         if (!current) return;
         if (error || !data) {
@@ -115,10 +116,14 @@ function OrderDetail({ id, back }) {
             <Text accessibilityRole="header" aria-level={2} style={ui.subtitle}>Itens do pedido</Text>
             {order.itens.map(item => (
               <View key={item.produto_id} style={[ui.row, ui.between]}>
-                <Text style={ui.body}>{item.nome}</Text>
-                <Text style={ui.number}>×{item.quantidade}</Text>
+                <Text style={ui.body}>{item.nome} ×{item.quantidade}</Text>
+                {item.total_centavos != null && <Text style={ui.number}>{formatCurrency(item.total_centavos)}</Text>}
               </View>
             ))}
+            <View style={[ui.row, ui.between]}>
+              <Text style={ui.label}>Total do pedido</Text>
+              <Text style={ui.number}>{formatCurrency(order.total_centavos) || 'Total indisponível'}</Text>
+            </View>
           </View>
         </>
       )}
@@ -141,7 +146,7 @@ export default function AdminOrders({ wide, scrollTop }) {
 
   useEffect(() => {
     let current = true;
-    let query = supabase.from('pedidos').select('id,criado_em,nome,forma_pagamento,status')
+    let query = supabase.from('pedidos').select('id,criado_em,nome,forma_pagamento,status,total_centavos')
       .order('criado_em', { ascending: false }).order('id', { ascending: false })
       .range(page * perPage, page * perPage + perPage);
     if (filter) query = query.eq('status', filter);
@@ -194,6 +199,7 @@ export default function AdminOrders({ wide, scrollTop }) {
               <View style={[orderStyles.main, ui.listText]}>
                 <Text style={ui.label}>#{orderCode(order.id)}</Text>
                 <Text numberOfLines={1} style={ui.meta}>{order.nome}</Text>
+                <Text style={ui.meta}>{formatCurrency(order.total_centavos) || 'Total indisponível'}</Text>
                 {!wide && <Text style={ui.meta}>{dateFormat.format(new Date(order.criado_em))} · {payments[order.forma_pagamento]}</Text>}
               </View>
               {wide && <Text style={[ui.meta, orderStyles.date]}>{dateFormat.format(new Date(order.criado_em))}</Text>}

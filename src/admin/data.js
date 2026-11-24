@@ -18,7 +18,7 @@ export const supabase = createClient(supabaseUrl, publishableKey, {
   }
 });
 
-export const fields = 'id,slug,nome,resumo,descricao,cor_destaque,sugestoes_drinks,imagem_path,modelo_3d_path,ordem,em_destaque,ativo,revisao';
+export const fields = 'id,slug,nome,resumo,descricao,cor_destaque,sugestoes_drinks,imagem_path,modelo_3d_path,ordem,em_destaque,ativo,revisao,preco_centavos,preco_final_centavos,desconto_percentual_bp,desconto_fixo_centavos';
 export const blankProduct = ordem => ({
   slug: '', nome: '', resumo: '', descricao: '', cor_destaque: '#049dd6',
   sugestoes_drinks: [], imagem_path: '', modelo_3d_path: null, ordem,

@@ -2,6 +2,8 @@ import { randomUUID } from 'expo-crypto';
 import { useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Link from '../Link';
+import { formatCurrency } from '../money';
+import { priceCart } from '../pricing';
 import { palette, styles } from '../styles';
 import { cartHref } from '../useRoute';
 import { orderCode, paymentMethods, submitOrder } from './orders';
@@ -23,19 +25,20 @@ function Field({ name, label, draft, change, ...props }) {
   );
 }
 
-export default function CheckoutScreen({ cart, flavors, wrap, wide, goCart, goCatalog }) {
+export default function CheckoutScreen({ cart, flavors, verified, loadError, wrap, wide, goCart, goCatalog }) {
   const [draft, setDraft] = useState(empty);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [receipt, setReceipt] = useState('');
+  const [reviewCart, setReviewCart] = useState(false);
   const request = useRef(null);
   const sending = useRef(false);
-  const names = new Map(flavors.map(flavor => [flavor.productId, flavor.name]));
+  const current = new Map(flavors.map(flavor => [flavor.productId, flavor]));
+  const pricing = request.current?.pricing || priceCart(cart.items, current);
   const change = (field, value) => setDraft(current => ({ ...current, [field]: value }));
 
   async function send() {
-    const selected = request.current?.items || cart.items;
-    if (sending.current || !selected?.length) return;
+    if (sending.current || !pricing || reviewCart) return;
     const client = Object.fromEntries(Object.entries(draft).map(([field, value]) => [field, value.trim()]));
     client.telefone = client.telefone.replace(/\D/g, '');
     client.documento = client.documento.toUpperCase().replace(/[./\s-]/g, '');
@@ -60,14 +63,14 @@ export default function CheckoutScreen({ cart, flavors, wrap, wide, goCart, goCa
     setBusy(true);
     setError('');
     try {
-      if (!request.current) request.current = { id: randomUUID(), items: selected };
-      const { id, items } = request.current;
-      const code = await submitOrder(id, client, items);
-      cart.complete(items);
+      if (!request.current) request.current = { id: randomUUID(), pricing };
+      const code = await submitOrder(request.current.id, client, pricing.lines);
+      cart.complete(pricing.lines);
       setReceipt(code);
       setDraft(empty);
     } catch (failure) {
       setError(failure.message || 'Não foi possível enviar o pedido.');
+      if (failure.reviewCart) setReviewCart(true);
     } finally {
       sending.current = false;
       setBusy(false);
@@ -80,6 +83,7 @@ export default function CheckoutScreen({ cart, flavors, wrap, wide, goCart, goCa
         <Text accessibilityRole="header" aria-level={1} style={styles.sectionHeading}>Pedido recebido</Text>
         <View style={[view.panel, view.receipt]}>
           <Text {...status} style={view.title}>Pedido #{orderCode(receipt)}</Text>
+          <Text style={view.label}>Total do pedido · {formatCurrency(pricing.total)}</Text>
           <Text style={styles.bodyText}>Guarde este código para consultar o pedido com a JogGelo.</Text>
           <Link href="./#sabores" action={goCatalog} style={styles.primary}><Text style={styles.primaryText}>Voltar ao catálogo</Text></Link>
         </View>
@@ -88,7 +92,7 @@ export default function CheckoutScreen({ cart, flavors, wrap, wide, goCart, goCa
   }
 
   const fields = { draft, change, editable: !busy };
-  const items = request.current?.items || cart.items;
+  const items = pricing?.lines || cart.items;
   return (
     <View style={[styles.detail, wrap, view.page]}>
       <Link href={cartHref} action={goCart} style={view.back}><Text style={styles.actionText}>Voltar ao carrinho</Text></Link>
@@ -144,13 +148,26 @@ export default function CheckoutScreen({ cart, flavors, wrap, wide, goCart, goCa
             <Text accessibilityRole="header" aria-level={2} style={view.title}>Resumo do pedido</Text>
             {items.map(item => (
               <View key={item.id} style={view.summaryLine}>
-                <Text style={[styles.bodyText, view.itemName]}>{names.get(item.id) || item.name}</Text>
-                <Text style={view.label}>×{item.quantity}</Text>
+                <Text style={[styles.bodyText, view.itemName]}>{item.name} ×{item.quantity}</Text>
+                {item.lineTotal != null && <Text style={view.label}>{formatCurrency(item.lineTotal)}</Text>}
               </View>
             ))}
+            {pricing ? (
+              <>
+                {pricing.discount > 0n && <View style={view.summaryLine}>
+                  <Text style={styles.bodyText}>Desconto</Text>
+                  <Text style={view.label}>−{formatCurrency(pricing.discount)}</Text>
+                </View>}
+                <View style={[view.summaryLine, view.total]}>
+                  <Text style={view.label}>Total do pedido</Text>
+                  <Text style={view.label}>{formatCurrency(pricing.total)}</Text>
+                </View>
+              </>
+            ) : <Text {...status} style={styles.bodyText}>{verified || loadError
+              ? 'Não foi possível calcular o total. Volte ao carrinho para revisar.' : 'Consultando preços…'}</Text>}
             {!!error && <Text {...status} style={view.error}>{error}</Text>}
-            <Pressable accessibilityRole="button" disabled={busy} onPress={send}
-              style={[styles.primary, view.submit, busy && styles.pressed]}>
+            <Pressable accessibilityRole="button" disabled={busy || !pricing || reviewCart} onPress={send}
+              style={[styles.primary, view.submit, (busy || !pricing || reviewCart) && styles.pressed]}>
               {busy && <ActivityIndicator size="small" color={palette.paper} />}
               <Text style={styles.primaryText}>{busy ? 'Enviando pedido…' : 'Enviar pedido'}</Text>
             </Pressable>
@@ -186,5 +203,6 @@ const view = StyleSheet.create({
   summaryLine: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   itemName: { flex: 1 },
   error: { color: '#842638', backgroundColor: '#fce8ec', borderRadius: 6, padding: 12, lineHeight: 20, fontSize: 14 },
+  total: { borderTopWidth: 1, borderTopColor: palette.line, paddingTop: 10 },
   submit: { flexDirection: 'row', alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center', gap: 8 }
 });

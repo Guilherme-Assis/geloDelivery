@@ -81,6 +81,8 @@ export const styles = StyleSheet.create({
   cardPackage: { width: '84%', height: '91%', ...visualShadow },
   cardDetails: { flex: 1 },
   cardContent: { flex: 1, padding: 13 },
+  cardOffer: { position: 'absolute', top: 10, left: 10, zIndex: 2 },
+  cardPrice: { marginBottom: 9 },
   cardActions: { paddingHorizontal: 13, paddingBottom: 13 },
   cardTitle: { color: palette.text, fontFamily: 'BarlowExtraBold', fontSize: 26, lineHeight: 29, marginBottom: 7 },
   cardSummary: { ...body, fontSize: 15, lineHeight: 21, marginBottom: 13 },

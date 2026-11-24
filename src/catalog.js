@@ -12,7 +12,7 @@ export function encodePath(path) {
 }
 
 export async function loadFlavors(slug, signal) {
-  const fields = 'id,slug,nome,resumo,descricao,cor_destaque,sugestoes_drinks,imagem_path,modelo_3d_path,em_destaque';
+  const fields = 'id,slug,nome,resumo,descricao,cor_destaque,sugestoes_drinks,imagem_path,modelo_3d_path,em_destaque,preco_centavos,preco_final_centavos';
   const selection = slug ? 'slug=eq.' + encodeURIComponent(slug) : 'order=ordem.asc,slug.asc';
   const response = await fetch(supabaseUrl + '/rest/v1/produtos?select=' + fields + '&ativo=eq.true&' + selection, {
     headers: { apikey: publishableKey },
@@ -32,7 +32,9 @@ export async function loadFlavors(slug, signal) {
       pairings: record.sugestoes_drinks.filter(pairing => typeof pairing === 'string' && pairing.trim()),
       imageUrl: image ? mediaUrl + image : '',
       modelPath: encodePath(record.modelo_3d_path),
-      featured: record.em_destaque
+      featured: record.em_destaque,
+      originalPriceCents: record.preco_centavos ?? null,
+      priceCents: record.preco_final_centavos ?? null
     };
   });
 }

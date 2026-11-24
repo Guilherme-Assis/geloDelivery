@@ -5,15 +5,23 @@ import Upload from 'lucide-react-native/icons/upload';
 import { useEffect, useState } from 'react';
 import { Image, Switch, Text, View, useWindowDimensions } from 'react-native';
 import { encodePath, mediaUrl, slugPattern } from '../catalog';
+import { currencyInput, parseCurrency } from '../money';
+import ProductPrice from '../ProductPrice';
 import { makeSlug, pickMedia, saveProduct } from './data';
 import ColorPicker from './ColorPicker';
 import { Button, Field, Notice, ink, ui } from './ui';
+
+const discountTypes = [['none', 'Sem desconto'], ['percent', 'Percentual'], ['fixed', 'Fixo em R$']];
 
 export default function ProductEditor({ product, cancel, saved }) {
   const { width } = useWindowDimensions();
   const [draft, setDraft] = useState({
     ...product,
     ordem: String(product.ordem),
+    preco: product.preco_centavos == null ? '' : currencyInput(product.preco_centavos),
+    desconto_tipo: product.desconto_percentual_bp != null ? 'percent' : product.desconto_fixo_centavos != null ? 'fixed' : 'none',
+    desconto_valor: product.desconto_percentual_bp == null && product.desconto_fixo_centavos == null
+      ? '' : currencyInput(product.desconto_percentual_bp ?? product.desconto_fixo_centavos),
     sugestoes_drinks: product.sugestoes_drinks.join('\n')
   });
   const [customSlug, setCustomSlug] = useState(Boolean(product.id));
@@ -24,6 +32,14 @@ export default function ProductEditor({ product, cancel, saved }) {
   const [picking, setPicking] = useState(false);
   const busy = Boolean(progress) || picking;
   const change = (field, value) => setDraft(current => ({ ...current, [field]: value }));
+  const originalPrice = parseCurrency(draft.preco);
+  const selectedDiscount = draft.desconto_tipo === 'none' ? null : parseCurrency(draft.desconto_valor);
+  const validDiscount = draft.desconto_tipo === 'none' || (originalPrice > 0 && selectedDiscount > 0 &&
+    (draft.desconto_tipo === 'percent' ? selectedDiscount <= 10000 : selectedDiscount <= originalPrice));
+  const discount = draft.desconto_tipo === 'percent'
+    ? Math.floor((originalPrice * selectedDiscount + 5000) / 10000)
+    : selectedDiscount || 0;
+  const pricePreview = { originalPriceCents: originalPrice, priceCents: originalPrice === null ? null : originalPrice - discount };
   const originalImage = encodePath(draft.imagem_path);
   const preview = image?.file.uri || (originalImage ? mediaUrl + originalImage : null);
 
@@ -65,12 +81,19 @@ export default function ProductEditor({ product, cancel, saved }) {
       modelo_3d_path: draft.modelo_3d_path,
       ordem: Number(draft.ordem),
       em_destaque: draft.em_destaque,
-      ativo: draft.ativo
+      ativo: draft.ativo,
+      preco_centavos: originalPrice,
+      desconto_percentual_bp: draft.desconto_tipo === 'percent' ? selectedDiscount : null,
+      desconto_fixo_centavos: draft.desconto_tipo === 'fixed' ? selectedDiscount : null
     };
     if (!input.nome || !input.resumo || !input.descricao) return setError('Preencha nome, resumo e descrição.');
     if (!slugPattern.test(input.slug)) return setError('Use letras minúsculas, números e hífens no endereço do produto.');
     if (!/^#[0-9a-f]{6}$/i.test(input.cor_destaque)) return setError('Escolha uma cor de destaque válida.');
     if (!/^\d+$/.test(draft.ordem) || input.ordem > 2147483647) return setError('Informe uma posição válida, começando por zero.');
+    if (draft.preco.trim() && originalPrice === null) return setError('Informe um preço válido em reais.');
+    if (!validDiscount) return setError(draft.desconto_tipo === 'percent'
+      ? 'Informe um preço e um percentual de desconto maior que zero e até 100%.'
+      : 'Informe um preço e um desconto em reais que não ultrapasse o preço original.');
     if (!input.imagem_path && !image) return setError('Selecione uma imagem da embalagem.');
 
     setProgress('Salvando produto…');
@@ -115,6 +138,25 @@ export default function ProductEditor({ product, cancel, saved }) {
             <Field label="Descrição" value={draft.descricao} multiline editable={!busy} onChangeText={value => change('descricao', value)} />
             <Field label="Sugestões de drinks (uma por linha)" value={draft.sugestoes_drinks} multiline editable={!busy}
               onChangeText={value => change('sugestoes_drinks', value)} />
+          </View>
+          <View style={[ui.panel, ui.section]}>
+            <Text accessibilityRole="header" aria-level={2} style={ui.subtitle}>Preço e desconto</Text>
+            <Field label="Preço por pacote (R$)" value={draft.preco} keyboardType="decimal-pad" maxLength={22}
+              editable={!busy} onChangeText={value => change('preco', value)} placeholder="0,00" />
+            <View style={ui.row}>
+              {discountTypes.map(([value, label]) => (
+                <Button key={value} secondary={draft.desconto_tipo !== value} disabled={busy} onPress={() => {
+                  if (draft.desconto_tipo !== value) setDraft(current => ({ ...current, desconto_tipo: value, desconto_valor: '' }));
+                }}>{label}</Button>
+              ))}
+            </View>
+            {draft.desconto_tipo !== 'none' && (
+              <Field label={draft.desconto_tipo === 'percent' ? 'Desconto (%)' : 'Desconto fixo (R$)'}
+                value={draft.desconto_valor} keyboardType="decimal-pad" maxLength={22}
+                editable={!busy} onChangeText={value => change('desconto_valor', value)} />
+            )}
+            {originalPrice === null ? <Text style={ui.meta}>Produtos sem preço aparecem na vitrine, mas ficam indisponíveis para pedido.</Text>
+              : validDiscount ? <ProductPrice flavor={pricePreview} featured /> : null}
           </View>
           <View style={[ui.panel, ui.section]}>
             <Text accessibilityRole="header" aria-level={2} style={ui.subtitle}>Apresentação na vitrine</Text>

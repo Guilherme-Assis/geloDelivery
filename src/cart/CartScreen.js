@@ -4,6 +4,9 @@ import ShoppingCart from 'lucide-react-native/icons/shopping-cart';
 import Trash2 from 'lucide-react-native/icons/trash-2';
 import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Link from '../Link';
+import { formatCurrency } from '../money';
+import ProductPrice from '../ProductPrice';
+import { hasPrice, priceCart } from '../pricing';
 import { palette, styles } from '../styles';
 import { checkoutHref, productHref } from '../useRoute';
 
@@ -11,7 +14,7 @@ const status = Platform.OS === 'web' ? { role: 'status' } : { accessibilityLiveR
 const number = new Intl.NumberFormat('pt-BR');
 
 export function AddToCart({ flavor, cart, compact = false }) {
-  const disabled = cart.items === null || !flavor.productId;
+  const disabled = cart.items === null || !flavor.productId || !hasPrice(flavor);
   const count = cart.items?.find(item => item.id === flavor.productId)?.quantity || 0;
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={'Adicionar ' + flavor.name + ' ao carrinho'}
@@ -47,6 +50,7 @@ function CartItem({ item, flavor, unavailable, cart, openProduct }) {
       <View style={basket.itemCopy}>
         <Text style={basket.itemName}>{name}</Text>
         {unavailable && <Text style={basket.unavailable}>Indisponível no catálogo</Text>}
+        {flavor && <ProductPrice flavor={flavor} />}
       </View>
     </>
   );
@@ -64,7 +68,7 @@ function CartItem({ item, flavor, unavailable, cart, openProduct }) {
           <Text {...status} accessibilityLabel={'Quantidade de ' + name + ': ' + item.quantity}
             style={basket.quantity}>{number.format(item.quantity)}</Text>
           <QuantityButton icon={Plus} label={'Aumentar quantidade de ' + name}
-            disabled={unavailable || item.quantity === Number.MAX_SAFE_INTEGER}
+            disabled={unavailable || (flavor && !hasPrice(flavor)) || item.quantity >= 2147483647}
             onPress={() => cart.adjust(item.id, 1)} />
         </View>
         <Pressable accessibilityRole="button" accessibilityLabel={'Remover ' + name + ' do carrinho'}
@@ -80,7 +84,8 @@ function CartItem({ item, flavor, unavailable, cart, openProduct }) {
 export default function CartScreen({ cart, flavors, verified, error, retry, wrap, wide, goCatalog, openProduct, goCheckout }) {
   const current = new Map(flavors.map(flavor => [flavor.productId, flavor]));
   const hasItems = cart.items?.length > 0;
-  const blocked = verified && cart.items?.some(item => !current.has(item.id));
+  const pricing = priceCart(cart.items, current);
+  const hasUnavailable = verified && cart.items?.some(item => !hasPrice(current.get(item.id)));
   return (
     <View style={[styles.detail, basket.page, wrap]}>
       <Text accessibilityRole="header" aria-level={1} style={[styles.sectionHeading, !wide && styles.sectionHeadingCompact]}>Seu carrinho</Text>
@@ -112,13 +117,29 @@ export default function CartScreen({ cart, flavors, verified, error, retry, wrap
                 <Text style={styles.bodyText}>Pacotes</Text>
                 <Text {...status} style={basket.summaryNumber}>{number.format(cart.total)}</Text>
               </View>
-              {blocked ? (
-                <Text style={styles.bodyText}>Remova os sabores indisponíveis para finalizar.</Text>
-              ) : (
+              {pricing && (
+                <>
+                  {pricing.discount > 0n && (
+                    <View style={basket.summaryLine}>
+                      <Text style={styles.bodyText}>Desconto</Text>
+                      <Text style={basket.summaryNumber}>−{formatCurrency(pricing.discount)}</Text>
+                    </View>
+                  )}
+                  <View style={[basket.summaryLine, basket.total]}>
+                    <Text style={basket.summaryNumber}>Total</Text>
+                    <Text {...status} style={basket.summaryNumber}>{formatCurrency(pricing.total)}</Text>
+                  </View>
+                </>
+              )}
+              {pricing ? (
                 <Link href={checkoutHref} action={goCheckout} style={[styles.primary, basket.checkout]}>
                   <Text style={styles.primaryText}>Finalizar pedido</Text>
                 </Link>
-              )}
+              ) : verified ? (
+                <Text style={styles.bodyText}>{hasUnavailable
+                  ? 'Remova os sabores indisponíveis ou sem preço para finalizar.'
+                  : 'Revise as quantidades para calcular o total.'}</Text>
+              ) : !error ? <Text {...status} style={styles.bodyText}>Consultando preços…</Text> : null}
               <Link href="./#sabores" action={goCatalog} style={basket.continue}>
                 <Text style={styles.actionText}>Continuar escolhendo</Text>
               </Link>
@@ -163,6 +184,7 @@ const basket = StyleSheet.create({
   summary: { padding: 16, gap: 12 },
   summaryWide: { width: '30%', minWidth: 220, maxWidth: 320 },
   summaryTitle: { color: palette.text, fontFamily: 'BarlowExtraBold', fontSize: 28, lineHeight: 32 },
+  total: { paddingTop: 8, borderTopWidth: 1, borderTopColor: palette.line },
   summaryLine: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   summaryNumber: { color: palette.text, fontFamily: 'SpaceGrotesk', fontSize: 17, fontWeight: '700',
     fontVariant: ['tabular-nums'] },

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { orderCode, paymentMethods } from '../checkout/orders';
-import { currencyInput, formatCurrency, loadReceipts, parseCurrency, receiptPageSize, saveReceipt } from './finance';
+import { currencyInput, formatCurrency, parseCurrency } from '../money';
+import { loadReceipts, receiptPageSize, saveReceipt } from './finance';
 import { Button, Field, Notice, ink, ui } from './ui';
 
 const filters = [['all', 'Todos'], ['registered', 'Registrados'], ['pending', 'A registrar']];
@@ -52,6 +53,7 @@ function ReceiptEditor({ initial, back }) {
         <Button secondary disabled={busy} onPress={back}>Voltar ao financeiro</Button>
       </View>
       <View style={[ui.panel, ui.section, finance.editor]}>
+        <Text style={ui.number}>Total do pedido · {formatCurrency(order.total_centavos) || 'Total indisponível'}</Text>
         <Text style={ui.meta}>Forma escolhida no checkout · {payments[order.forma_pagamento]}</Text>
         {order.recebimento_registrado_em && (
           <Text style={ui.meta}>Registro atualizado em {formatDate(order.recebimento_registrado_em)}</Text>
@@ -95,7 +97,8 @@ export default function AdminFinance({ wide, scrollTop }) {
 
   const summary = data?.summary;
   const metrics = summary ? [
-    ['Total recebido', formatCurrency(summary.total_centavos)],
+    ['Total dos pedidos', formatCurrency(summary.total_pedidos_centavos)],
+    ['Total recebido', formatCurrency(summary.total_recebido_centavos)],
     ['Pedidos com registro', String(summary.com_registro)],
     ['Pedidos a registrar', String(summary.sem_registro)]
   ] : [];
@@ -106,7 +109,7 @@ export default function AdminFinance({ wide, scrollTop }) {
       <View style={[ui.row, ui.between]}>
         <View>
           <Text accessibilityRole="header" aria-level={1} style={ui.title}>Financeiro</Text>
-          <Text style={ui.body}>Recebimentos registrados por pedido</Text>
+          <Text style={ui.body}>Totais e recebimentos por pedido</Text>
         </View>
         <Button secondary onPress={retry}>Atualizar</Button>
       </View>
@@ -114,12 +117,15 @@ export default function AdminFinance({ wide, scrollTop }) {
         <View style={[ui.panel, ui.summary, !wide && finance.summaryCompact]}>
           {metrics.map(([label, value], index) => (
             <View key={label} style={[ui.metric, wide && index < metrics.length - 1 && ui.metricBorder,
-              !wide && index === 0 && finance.mainMetric]}>
+              !wide && index < 2 && finance.mainMetric]}>
               <Text style={ui.metricLabel}>{label}</Text>
               <Text style={[ui.metricValue, index === 0 && finance.total]}>{value}</Text>
             </View>
           ))}
         </View>
+      )}
+      {Number(summary?.sem_total) > 0 && (
+        <Text style={ui.meta}>Pedidos sem valor histórico · {summary.sem_total}</Text>
       )}
       <View style={ui.row}>
         {filters.map(([key, label]) => (
@@ -149,10 +155,13 @@ export default function AdminFinance({ wide, scrollTop }) {
                   <View style={finance.order}>
                     <Text style={ui.label}>#{orderCode(order.id)} · {order.nome}</Text>
                     <Text style={ui.meta}>{formatDate(order.criado_em)}</Text>
+                    <Text style={ui.meta}>{order.total_centavos == null ? 'Total indisponível' : 'Total · ' + formatCurrency(order.total_centavos)}</Text>
                     {!wide && <Text style={ui.meta}>{payments[order.forma_pagamento]}</Text>}
                   </View>
                   {wide && <Text style={[ui.meta, finance.method]}>{payments[order.forma_pagamento]}</Text>}
-                  <Text style={[registered ? ui.number : ui.meta, wide && finance.amount]}>{amount}</Text>
+                  <Text style={[registered ? ui.number : ui.meta, wide && finance.amount]}>
+                    {!wide && 'Recebido · '}{amount}
+                  </Text>
                   <View style={wide && finance.action}>
                     <Button secondary onPress={() => { setSelected(order); scrollTop(); }}>
                       {registered ? 'Editar valor' : 'Registrar valor'}

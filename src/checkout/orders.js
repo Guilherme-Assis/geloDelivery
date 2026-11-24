@@ -30,7 +30,9 @@ export async function submitOrder(id, client, items) {
       body: JSON.stringify({
         p_chave: id,
         p_cliente: client,
-        p_itens: items.map(item => ({ produto_id: item.id, quantidade: item.quantity }))
+        p_itens: items.map(item => ({
+          produto_id: item.id, quantidade: item.quantity, preco_unitario_centavos: item.unitPriceCents
+        }))
       })
     });
     body = await response.json();
@@ -40,8 +42,16 @@ export async function submitOrder(id, client, items) {
   } finally {
     clearTimeout(timeout);
   }
-  if (body?.message === 'ITENS_INDISPONIVEIS') {
-    throw new Error('Algum sabor do carrinho ficou indisponível. Volte ao carrinho para revisar.');
+  const cartErrors = {
+    ITENS_INDISPONIVEIS: 'Algum sabor do carrinho ficou indisponível. Volte ao carrinho para revisar.',
+    ITENS_SEM_PRECO: 'Algum sabor ficou sem preço. Volte ao carrinho para revisar.',
+    PRECO_ALTERADO: 'Um preço mudou. Volte ao carrinho para conferir o novo total.',
+    TOTAL_INVALIDO: 'Revise as quantidades no carrinho para calcular o total.'
+  };
+  if (Object.hasOwn(cartErrors, body?.message)) {
+    const error = new Error(cartErrors[body.message]);
+    error.reviewCart = true;
+    throw error;
   }
   if (body?.message === 'DADOS_INVALIDOS') {
     throw new Error('Confira os dados de contato e entrega antes de enviar.');
