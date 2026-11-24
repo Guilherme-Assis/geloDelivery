@@ -1,184 +1,204 @@
-const flavors = [
-  {
-    id: 'maca-verde', name: 'Maçã Verde', color: '#c5f080',
-    summary: 'Frutado e refrescante, com acidez de maçã verde.',
-    description: 'A acidez da maçã verde traz frescor ao copo. Experimente com bases leves ou bebidas com gás para destacar o sabor da fruta.',
-    pairings: ['Gin tônica', 'Vodca com soda', 'Água com gás']
-  },
-  {
-    id: 'lima', name: 'Limão & Hortelã', color: '#c4f18d',
-    summary: 'Cítrico e refrescante, com um toque herbal.',
-    description: 'O frescor da hortelã encontra a acidez do limão. A combinação deixa espaço para o sabor do drink e funciona especialmente bem com bebidas mais leves.',
-    pairings: ['Mojito', 'Gin tônica', 'Soda de limão']
-  },
-  {
-    id: 'mirtilo', name: 'Mirtilo', color: '#94bbff',
-    summary: 'Frutado e delicado, com acidez suave.',
-    description: 'O mirtilo traz um perfil de fruta madura com leve acidez. Combine com bebidas cítricas ou gaseificadas para dar contraste ao paladar.',
-    pairings: ['Gin tônica', 'Vodca com soda', 'Limonada']
-  },
-  {
-    id: 'morango', name: 'Morango', color: '#ff9fbf',
-    summary: 'Frutado e levemente doce, com um toque ácido.',
-    description: 'O morango traz um sabor familiar e levemente doce. A acidez da fruta combina com limão e dá equilíbrio a drinks borbulhantes.',
-    pairings: ['Caipirinha', 'Spritz', 'Limonada com gás']
-  },
-  {
-    id: 'maracuja', name: 'Maracujá', color: '#ffd081',
-    summary: 'Tropical e aromático, com acidez marcante.',
-    description: 'O aroma tropical e a acidez do maracujá dão personalidade ao drink. É uma boa combinação para bases suaves e bebidas de gengibre.',
-    pairings: ['Moscow mule', 'Caipiroska', 'Soda de gengibre']
-  },
-  {
-    id: 'abacaxi', name: 'Abacaxi', color: '#f9d268',
-    summary: 'Tropical e suculento, com acidez de fruta madura.',
-    description: 'O abacaxi combina doçura e acidez. Em bebidas com rum, coco ou gengibre, seu perfil tropical ganha destaque conforme o gelo derrete.',
-    pairings: ['Piña colada', 'Caipirinha de abacaxi', 'Soda de gengibre']
-  },
-  {
-    id: 'melancia', name: 'Melancia', color: '#ff939f',
-    summary: 'Leve, fresco e suavemente doce.',
-    description: 'A melancia traz uma doçura delicada. Experimente com hortelã, limão ou uma base com gás para realçar o frescor.',
-    pairings: ['Gin com hortelã', 'Água com gás e limão', 'Spritz de melancia']
-  },
-  {
-    id: 'uva', name: 'Uva', color: '#c7a4ef',
-    summary: 'Frutado e aromático, com um toque ácido.',
-    description: 'A uva roxa se destaca pelo aroma e pela doçura frutada. Combina com bases neutras e com bebidas cítricas que equilibram o sabor.',
-    pairings: ['Vodca com soda', 'Gin tônica', 'Limonada com gás']
-  },
-  {
-    id: 'coco', name: 'Coco', color: '#b7e8ee',
-    summary: 'Suave e tropical, com aroma delicado de coco.',
-    description: 'O coco traz um sabor suave que combina com frutas tropicais. Experimente em drinks com abacaxi, rum branco ou limão.',
-    pairings: ['Piña colada', 'Batida de coco', 'Água de coco com limão']
-  },
-  {
-    id: 'pessego', name: 'Pêssego', color: '#ffb599',
-    summary: 'Doce e perfumado, com um toque de acidez.',
-    description: 'O pêssego funciona com bases leves e borbulhantes. Seu aroma de fruta madura também combina com chá gelado e limão.',
-    pairings: ['Bellini', 'Chá gelado de limão', 'Spritz de pêssego']
-  }
-];
-
-const featuredFlavors = flavors.slice(0, 5);
+const supabaseUrl = 'https://ziacmlaeuzsolillqkka.supabase.co';
+const publishableKey = 'sb_publishable_BpvDosVttxtm5UPXepQ6lw_sKBKjXUj';
+const mediaUrl = `${supabaseUrl}/storage/v1/object/public/produtos/`;
+const backLink = '<a class="back" href="./#sabores">Todos os sabores</a>';
+const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const home = document.querySelector('#home');
 const detail = document.querySelector('#detail');
-const stage = document.querySelector('#showcase');
-const currentName = document.querySelector('#current-name');
-const pause = document.querySelector('.pause');
-const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
-const imagePath = flavor => `assets/pacote-${flavor.id}.webp`;
-const detailPath = flavor => `?sabor=${flavor.id}`;
 
-document.querySelector('#flavor-grid').innerHTML = flavors.map(flavor => `
-  <a class="card" href="${detailPath(flavor)}" style="--flavor:${flavor.color}">
-    <div class="card-art"><img src="${imagePath(flavor)}" alt="" decoding="async" loading="lazy"></div>
-    <div class="card-content"><h3>${flavor.name}</h3><p>${flavor.summary}</p>
-      <span class="card-link">Ver detalhes <span aria-hidden="true">+</span></span></div>
-  </a>`).join('');
+function escapeHtml(value) {
+  const entities = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+  return value.replace(/[&<>"']/g, character => entities[character]);
+}
 
-let selected = 0;
-let paused = reducedMotion.matches;
-let timer;
-let inView = true;
-const displayDuration = 5300;
+function encodePath(path) {
+  if (!path) return '';
+  const parts = path.split('/');
+  if (parts.some(part => !part || part === '.' || part === '..')) return '';
+  return parts.map(encodeURIComponent).join('/');
+}
 
-const packageStage = stage.querySelector('.package-stage');
-const firstSlide = packageStage.querySelector('.package-slide');
-const slides = featuredFlavors.map((_, index) => {
-  if (index === 0) return firstSlide;
-  const slide = firstSlide.cloneNode(true);
-  slide.classList.remove('is-active');
-  slide.querySelectorAll('img').forEach((image, offset) => {
-    image.src = imagePath(featuredFlavors[(index + offset) % featuredFlavors.length]);
+async function loadFlavors(slug) {
+  const url = new URL('/rest/v1/produtos', supabaseUrl);
+  url.searchParams.set('select', 'slug,nome,resumo,descricao,cor_destaque,sugestoes_drinks,imagem_path,modelo_3d_path,em_destaque');
+  url.searchParams.set('ativo', 'eq.true');
+  if (slug) url.searchParams.set('slug', `eq.${slug}`);
+  else url.searchParams.set('order', 'ordem.asc,slug.asc');
+
+  const response = await fetch(url, {
+    headers: { apikey: publishableKey },
+    cache: 'no-cache',
+    signal: AbortSignal.timeout(10000)
   });
-  packageStage.append(slide);
-  return slide;
-});
+  if (!response.ok) throw new Error(`Supabase respondeu com HTTP ${response.status}`);
 
-const buttons = featuredFlavors.map((flavor, index) => {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.title = flavor.name;
-  button.setAttribute('aria-label', `Destacar ${flavor.name}`);
-  button.addEventListener('click', () => {
-    selectFlavor(index);
+  const records = await response.json();
+  return records.map(record => {
+    const image = encodePath(record.imagem_path);
+    return {
+      id: record.slug,
+      name: record.nome,
+      summary: record.resumo,
+      description: record.descricao,
+      color: /^#[0-9a-f]{6}$/i.test(record.cor_destaque) ? record.cor_destaque : '#049dd6',
+      pairings: record.sugestoes_drinks.filter(pairing => typeof pairing === 'string' && pairing.trim()),
+      imageUrl: image ? mediaUrl + image : '',
+      modelPath: encodePath(record.modelo_3d_path),
+      featured: record.em_destaque
+    };
+  });
+}
+
+function renderCatalog(flavors) {
+  document.querySelector('#flavor-grid').innerHTML = flavors.map(flavor => `
+    <a class="card" href="?sabor=${encodeURIComponent(flavor.id)}" style="--flavor:${flavor.color}">
+      <div class="card-art">${flavor.imageUrl ? `<img src="${escapeHtml(flavor.imageUrl)}" alt="" decoding="async" loading="lazy">` : ''}</div>
+      <div class="card-content"><h3>${escapeHtml(flavor.name)}</h3><p>${escapeHtml(flavor.summary)}</p>
+        <span class="card-link">Ver detalhes <span aria-hidden="true">+</span></span></div>
+    </a>`).join('');
+}
+
+function setupShowcase(featured) {
+  if (!featured.length) return;
+  const stage = document.querySelector('#showcase');
+  const packageStage = stage.querySelector('.package-stage');
+  const slideTemplate = stage.querySelector('#package-slide');
+  const controls = stage.querySelector('.flavor-controls');
+  const currentName = stage.querySelector('#current-name');
+  const selectors = stage.querySelector('.selectors');
+  const pause = stage.querySelector('.pause');
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  let selected = 0;
+  let paused = reducedMotion.matches;
+  let inView = true;
+  let timer;
+
+  const slides = featured.map((_, index) => {
+    const slide = slideTemplate.content.firstElementChild.cloneNode(true);
+    slide.querySelectorAll('img').forEach((image, offset) => {
+      const flavor = featured[(index + offset) % featured.length];
+      if (offset < featured.length && flavor.imageUrl) image.src = flavor.imageUrl;
+      else image.remove();
+    });
+    packageStage.append(slide);
+    return slide;
+  });
+
+  const buttons = featured.map((flavor, index) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.title = flavor.name;
+    button.setAttribute('aria-label', `Destacar ${flavor.name}`);
+    button.addEventListener('click', () => {
+      selectFlavor(index);
+      schedule();
+    });
+    selectors.append(button);
+    return button;
+  });
+
+  function selectFlavor(index) {
+    selected = index;
+    const flavor = featured[index];
+    stage.style.setProperty('--flavor', flavor.color);
+    currentName.textContent = flavor.name.toLocaleUpperCase('pt-BR');
+    slides.forEach((slide, position) => slide.classList.toggle('is-active', index === position));
+    buttons.forEach((button, position) => button.setAttribute('aria-pressed', String(index === position)));
+  }
+
+  function updatePause() {
+    const label = paused ? 'Retomar troca de sabores' : 'Pausar troca de sabores';
+    pause.dataset.paused = paused;
+    pause.title = label;
+    pause.setAttribute('aria-label', label);
+  }
+
+  function schedule() {
+    clearTimeout(timer);
+    if (paused || !inView || document.hidden) return;
+    timer = setTimeout(() => {
+      selectFlavor((selected + 1) % featured.length);
+      schedule();
+    }, 5300);
+  }
+
+  selectFlavor(0);
+  controls.hidden = false;
+  if (featured.length === 1) {
+    selectors.hidden = true;
+    pause.hidden = true;
+    return;
+  }
+
+  updatePause();
+  pause.addEventListener('click', () => {
+    paused = !paused;
+    updatePause();
     schedule();
   });
-  document.querySelector('.selectors').append(button);
-  return button;
-});
-
-function selectFlavor(index) {
-  selected = index;
-  const flavor = featuredFlavors[index];
-  stage.style.setProperty('--flavor', flavor.color);
-  currentName.textContent = flavor.name.toLocaleUpperCase('pt-BR');
-  slides.forEach((slide, position) => slide.classList.toggle('is-active', index === position));
-  buttons.forEach((button, position) => button.setAttribute('aria-pressed', String(index === position)));
-}
-
-function updatePause() {
-  const label = paused ? 'Retomar troca de sabores' : 'Pausar troca de sabores';
-  pause.dataset.paused = paused;
-  pause.title = label;
-  pause.setAttribute('aria-label', label);
-}
-
-function schedule() {
-  clearTimeout(timer);
-  if (paused || !inView || home.hidden || document.hidden) return;
-  timer = setTimeout(() => {
-    selectFlavor((selected + 1) % featuredFlavors.length);
+  reducedMotion.addEventListener('change', event => {
+    paused = event.matches;
+    updatePause();
     schedule();
-  }, displayDuration);
+  });
+  document.addEventListener('visibilitychange', schedule);
+  new IntersectionObserver(([entry]) => {
+    inView = entry.isIntersecting;
+    schedule();
+  }).observe(stage);
 }
 
-pause.addEventListener('click', () => {
-  paused = !paused;
-  updatePause();
-  schedule();
-});
-reducedMotion.addEventListener('change', event => {
-  paused = event.matches;
-  updatePause();
-  schedule();
-});
-document.addEventListener('visibilitychange', schedule);
+function renderDetail(flavor) {
+  if (!flavor) {
+    document.title = 'Sabor não encontrado — JogGelo';
+    detail.innerHTML = `${backLink}<h1>Sabor não encontrado</h1>`;
+    return;
+  }
 
-const requested = new URLSearchParams(location.search).get('sabor');
-const flavor = flavors.find(candidate => candidate.id === requested);
-if (requested) {
-  home.hidden = true;
-  detail.hidden = false;
-  document.querySelector('#nav-flavors').setAttribute('aria-current', 'true');
-  if (flavor) {
-    document.title = `${flavor.name} — JogGelo`;
-    detail.innerHTML = `
-      <a class="back" href="./#sabores">Todos os sabores</a>
-      <div class="detail-layout" style="--flavor:${flavor.color}">
-        <div class="detail-art">
-          <img src="${imagePath(flavor)}" alt="Embalagem de gelo sabor ${flavor.name}">
+  document.title = `${flavor.name} — JogGelo`;
+  const name = escapeHtml(flavor.name);
+  const hasModel = flavor.modelPath && flavor.imageUrl;
+  const pairings = flavor.pairings.map(pairing => `<li>${escapeHtml(pairing)}</li>`).join('');
+  detail.innerHTML = `
+    ${backLink}
+    <div class="detail-layout" style="--flavor:${flavor.color}">
+      <div class="detail-art">
+        ${flavor.imageUrl ? `<img src="${escapeHtml(flavor.imageUrl)}" alt="Embalagem de gelo sabor ${name}">` : ''}
+        ${hasModel ? `
           <div class="detail-model" id="detail-model" hidden></div>
           <button class="model-toggle" type="button" aria-controls="detail-model" aria-expanded="false">Ver em 3D</button>
-          <p class="model-status" role="status" hidden></p>
-        </div>
-        <div class="detail-copy">
-          <p class="eyebrow"><span></span> GELO SABORIZADO</p>
-          <h1>${flavor.name}</h1>
-          <p>${flavor.description}</p>
-          <div class="pairings"><h2>Experimente com</h2>
-            <ul>${flavor.pairings.map(pairing => `<li>${pairing}</li>`).join('')}</ul>
-          </div>
-        </div>
-      </div>`;
-    setupModel(flavor);
-  } else {
-    document.title = 'Sabor não encontrado — JogGelo';
-    detail.innerHTML = '<a class="back" href="./#sabores">Todos os sabores</a><h1>Sabor não encontrado</h1>';
+          <p class="model-status" role="status" hidden></p>` : ''}
+      </div>
+      <div class="detail-copy">
+        <p class="eyebrow"><span></span> GELO SABORIZADO</p>
+        <h1>${name}</h1>
+        <p>${escapeHtml(flavor.description)}</p>
+        ${pairings ? `<div class="pairings"><h2>Experimente com</h2><ul>${pairings}</ul></div>` : ''}
+      </div>
+    </div>`;
+  if (hasModel) setupModel(flavor);
+}
+
+async function start() {
+  const requested = new URLSearchParams(location.search).get('sabor');
+  if (requested) {
+    home.hidden = true;
+    detail.hidden = false;
+    document.querySelector('#nav-flavors').setAttribute('aria-current', 'true');
+    detail.innerHTML = `${backLink}<p role="status">Carregando sabor…</p>`;
+    if (!slugPattern.test(requested)) {
+      renderDetail();
+      return;
+    }
+    try {
+      const [flavor] = await loadFlavors(requested);
+      renderDetail(flavor);
+    } catch {
+      detail.innerHTML = `${backLink}<p role="status">Não foi possível carregar este sabor. Atualize a página para tentar novamente.</p>`;
+    }
+    return;
   }
-} else {
+
   const updateNav = () => {
     const onCatalog = location.hash === '#sabores';
     document.querySelector('#nav-home').toggleAttribute('aria-current', !onCatalog);
@@ -187,12 +207,17 @@ if (requested) {
   };
   updateNav();
   addEventListener('hashchange', updateNav);
-  selectFlavor(0);
-  updatePause();
-  new IntersectionObserver(([entry]) => {
-    inView = entry.isIntersecting;
-    schedule();
-  }).observe(stage);
+  const status = document.querySelector('#catalog-status');
+  try {
+    const flavors = await loadFlavors();
+    status.hidden = flavors.length > 0;
+    if (!flavors.length) status.textContent = 'Nenhum sabor disponível no momento.';
+    renderCatalog(flavors);
+    setupShowcase(flavors.filter(flavor => flavor.featured).slice(0, 5));
+  } catch {
+    status.hidden = false;
+    status.textContent = 'Não foi possível carregar os sabores. Atualize a página para tentar novamente.';
+  }
 }
 
 function setupModel(flavor) {
@@ -234,9 +259,17 @@ function setupModel(flavor) {
       viewer.setAttribute('touch-action', 'pan-y');
       viewer.setAttribute('camera-orbit', '13deg 84deg auto');
       viewer.setAttribute('interaction-prompt', 'none');
-      viewer.setAttribute('poster', imagePath(flavor));
-      viewer.setAttribute('src', `assets/models/${flavor.id}.glb`);
-      viewer.addEventListener('error', showError, { once: true });
+      viewer.setAttribute('poster', flavor.imageUrl);
+      let usingLocalModel = false;
+      viewer.addEventListener('error', () => {
+        if (usingLocalModel) {
+          showError();
+          return;
+        }
+        usingLocalModel = true;
+        viewer.setAttribute('src', `assets/${flavor.modelPath}`);
+      });
+      viewer.setAttribute('src', mediaUrl + flavor.modelPath);
       container.append(viewer);
       showModel(true);
     } catch {
@@ -246,3 +279,5 @@ function setupModel(flavor) {
     }
   });
 }
+
+start();
