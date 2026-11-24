@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { Image, Switch, Text, View, useWindowDimensions } from 'react-native';
 import { encodePath, mediaUrl, slugPattern } from '../catalog';
 import { makeSlug, pickMedia, saveProduct } from './data';
+import ColorPicker from './ColorPicker';
 import { Button, Field, Notice, ink, ui } from './ui';
 
 export default function ProductEditor({ product, cancel, saved }) {
@@ -68,7 +69,7 @@ export default function ProductEditor({ product, cancel, saved }) {
     };
     if (!input.nome || !input.resumo || !input.descricao) return setError('Preencha nome, resumo e descrição.');
     if (!slugPattern.test(input.slug)) return setError('Use letras minúsculas, números e hífens no endereço do produto.');
-    if (!/^#[0-9a-f]{6}$/i.test(input.cor_destaque)) return setError('Use uma cor no formato #049dd6.');
+    if (!/^#[0-9a-f]{6}$/i.test(input.cor_destaque)) return setError('Escolha uma cor de destaque válida.');
     if (!/^\d+$/.test(draft.ordem) || input.ordem > 2147483647) return setError('Informe uma posição válida, começando por zero.');
     if (!input.imagem_path && !image) return setError('Selecione uma imagem da embalagem.');
 
@@ -119,8 +120,7 @@ export default function ProductEditor({ product, cancel, saved }) {
             <Text accessibilityRole="header" aria-level={2} style={ui.subtitle}>Apresentação na vitrine</Text>
             <Field label="Ordem no catálogo" value={draft.ordem} keyboardType="number-pad" editable={!busy}
               onChangeText={value => change('ordem', value)} />
-            <Field label="Cor de destaque" value={draft.cor_destaque} autoCapitalize="none" editable={!busy}
-              onChangeText={value => change('cor_destaque', value)} />
+            <ColorPicker value={draft.cor_destaque} disabled={busy} onChange={value => change('cor_destaque', value)} />
           </View>
         </View>
         <View style={[ui.fieldStack, wide && ui.formRight]}>
