@@ -1,5 +1,3 @@
-import { createIceRenderer } from './ice.js';
-
 const flavors = [
   {
     id: 'lima', name: 'Limão & Hortelã', color: '#c4f18d',
@@ -30,11 +28,9 @@ const flavors = [
 const home = document.querySelector('#home');
 const detail = document.querySelector('#detail');
 const stage = document.querySelector('#showcase');
-const images = [...document.querySelectorAll('.ice')];
 const currentName = document.querySelector('#current-name');
 const pause = document.querySelector('.pause');
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
-const renderer = createIceRenderer(document.querySelector('#ice-canvas'));
 const imagePath = flavor => `assets/${flavor.id}.webp`;
 const detailPath = flavor => `?sabor=${flavor.id}`;
 
@@ -47,20 +43,21 @@ document.querySelector('#flavor-grid').innerHTML = flavors.map(flavor => `
 
 let selected = 0;
 let paused = reducedMotion.matches;
-let elapsed = 0;
-let lastFrame = 0;
-let frame = 0;
+let timer;
 let inView = true;
-const hold = 3200;
-const spin = 2100;
-const cycle = hold + spin;
+const displayDuration = 5300;
 
-// Decode each image ahead of the first automatic change.
-const preloadedImages = flavors.map(flavor => {
-  const image = new Image();
-  image.src = imagePath(flavor);
-  image.decode().catch(() => {});
-  return image;
+const iceStage = stage.querySelector('.ice-stage');
+const firstSlide = iceStage.querySelector('.ice-set');
+const slides = flavors.map((_, index) => {
+  if (index === 0) return firstSlide;
+  const slide = firstSlide.cloneNode(true);
+  slide.classList.remove('is-active');
+  slide.querySelectorAll('img').forEach((image, offset) => {
+    image.src = imagePath(flavors[(index + offset) % flavors.length]);
+  });
+  iceStage.append(slide);
+  return slide;
 });
 
 const buttons = flavors.map((flavor, index) => {
@@ -70,8 +67,7 @@ const buttons = flavors.map((flavor, index) => {
   button.setAttribute('aria-label', `Destacar ${flavor.name}`);
   button.addEventListener('click', () => {
     selectFlavor(index);
-    elapsed = 0;
-    paint();
+    schedule();
   });
   document.querySelector('.selectors').append(button);
   return button;
@@ -82,48 +78,24 @@ function selectFlavor(index) {
   const flavor = flavors[index];
   stage.style.setProperty('--flavor', flavor.color);
   currentName.textContent = flavor.name.toLocaleUpperCase('pt-BR');
-  images.forEach((image, offset) => {
-    image.src = preloadedImages[(index + offset) % flavors.length].src;
-  });
+  slides.forEach((slide, position) => slide.classList.toggle('is-active', index === position));
   buttons.forEach((button, position) => button.setAttribute('aria-pressed', String(index === position)));
 }
 
 function updatePause() {
-  const label = paused ? 'Retomar rotação' : 'Pausar rotação';
+  const label = paused ? 'Retomar troca de sabores' : 'Pausar troca de sabores';
   pause.dataset.paused = paused;
   pause.title = label;
   pause.setAttribute('aria-label', label);
 }
 
-function paint() {
-  const phase = Math.max(0, Math.min(1, (elapsed - hold) / spin));
-  const angle = 2 * Math.PI * phase;
-  const opacity = Math.min(1, phase * 10, (1 - phase) * 10);
-  const rendered = opacity > 0 && renderer?.draw(angle, selected);
-  if (renderer) renderer.canvas.style.opacity = rendered ? opacity : 0;
-  images.forEach((image, offset) => {
-    image.style.opacity = rendered ? 1 - opacity : 1;
-    image.style.setProperty('--turn', rendered ? '0deg' : `${phase * 360}deg`);
-    image.style.setProperty('--lift', `${Math.sin(elapsed / 700 + offset * 2) * (offset === 0 ? 5 : 8)}px`);
-  });
-}
-
-function tick(now) {
-  if (lastFrame) elapsed += Math.min(now - lastFrame, 70);
-  lastFrame = now;
-  if (elapsed >= cycle) {
-    if (renderer) renderer.draw(Math.PI * 2, selected);
-    selectFlavor((selected + 1) % flavors.length);
-    elapsed = 0;
-  }
-  paint();
-  frame = requestAnimationFrame(tick);
-}
-
 function schedule() {
-  cancelAnimationFrame(frame);
-  lastFrame = 0;
-  if (!paused && inView && !home.hidden && !document.hidden) frame = requestAnimationFrame(tick);
+  clearTimeout(timer);
+  if (paused || !inView || home.hidden || document.hidden) return;
+  timer = setTimeout(() => {
+    selectFlavor((selected + 1) % flavors.length);
+    schedule();
+  }, displayDuration);
 }
 
 pause.addEventListener('click', () => {
@@ -133,18 +105,10 @@ pause.addEventListener('click', () => {
 });
 reducedMotion.addEventListener('change', event => {
   paused = event.matches;
-  if (paused) {
-    elapsed = 0;
-    paint();
-  }
   updatePause();
   schedule();
 });
 document.addEventListener('visibilitychange', schedule);
-new IntersectionObserver(([entry]) => {
-  inView = entry.isIntersecting;
-  schedule();
-}).observe(stage);
 
 const requested = new URLSearchParams(location.search).get('sabor');
 const flavor = flavors.find(candidate => candidate.id === requested);
@@ -182,4 +146,8 @@ if (requested) {
   addEventListener('hashchange', updateNav);
   selectFlavor(0);
   updatePause();
+  new IntersectionObserver(([entry]) => {
+    inView = entry.isIntersecting;
+    schedule();
+  }).observe(stage);
 }

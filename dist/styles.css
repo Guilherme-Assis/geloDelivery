@@ -42,12 +42,13 @@ h1,h2,h3{font-family:"Barlow Condensed","Arial Narrow",Impact,sans-serif}
 .spark{position:absolute;color:#9ad6ff;filter:drop-shadow(0 0 10px #65b0ff);font-size:1.4rem;z-index:1;pointer-events:none}
 .spark-top{top:19%;left:15%}
 .spark-bottom{top:71%;right:11%}
-.ice-set, #ice-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.ice-stage,.ice-set{position:absolute;inset:0;pointer-events:none}
+.ice-set{opacity:0;transition:opacity .55s ease-in-out}
+.ice-set.is-active{opacity:1}
 .ice{position:absolute;object-fit:contain;filter:drop-shadow(0 16px 24px #02071378);user-select:none}
 .ice-main{width:63%;height:76%;top:8%;left:19%;transform:rotate(-8deg);transform-origin:center}
 .ice-small-top{width:27%;height:31%;right:-1%;top:9%;transform:rotate(13deg)}
 .ice-small-bottom{width:23%;height:27%;left:2%;bottom:18%;transform:rotate(-14deg)}
-.showcase.rendering .ice-set{visibility:hidden}
 .flavor-controls{position:absolute;z-index:2;bottom:7%;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:13px;padding:5px 7px 5px 12px;border:1px solid #5479a775;border-radius:100px;background:#081728ec;white-space:nowrap}
 .flavor-current{font-size:.75rem;font-weight:700;letter-spacing:.09em;display:flex;gap:8px;align-items:center}
 .current-dot{height:7px;width:7px;background:var(--flavor);border-radius:50%;box-shadow:0 0 8px color-mix(in srgb,var(--flavor) 66%,transparent)}
@@ -131,7 +132,3 @@ footer a:hover{color:var(--text)}
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{scroll-behavior:auto!important;transition:none!important}
 }
-.ice-main{transform:translateY(var(--lift,0px)) rotate(-8deg) perspective(680px) rotateY(var(--turn,0deg))}
-.ice-small-top{transform:translateY(var(--lift,0px)) rotate(13deg) perspective(430px) rotateY(var(--turn,0deg))}
-.ice-small-bottom{transform:translateY(var(--lift,0px)) rotate(-14deg) perspective(390px) rotateY(var(--turn,0deg))}
-#ice-canvas{opacity:0}

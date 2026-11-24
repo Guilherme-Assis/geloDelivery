@@ -34,16 +34,17 @@
           <div class="showcase" id="showcase">
             <div class="orbit orbit-outer" aria-hidden="true"></div><div class="orbit orbit-inner" aria-hidden="true"></div>
             <span class="spark spark-top" aria-hidden="true">✦</span><span class="spark spark-bottom" aria-hidden="true">✧</span>
-            <div class="ice-set" aria-hidden="true">
-              <img class="ice ice-main" id="hero-ice" src="assets/lima.webp" alt="">
-              <img class="ice ice-small-top" src="assets/mirtilo.webp" alt="">
-              <img class="ice ice-small-bottom" src="assets/morango.webp" alt="">
+            <div class="ice-stage" aria-hidden="true">
+              <div class="ice-set is-active">
+                <img class="ice ice-main" src="assets/lima.webp" alt="">
+                <img class="ice ice-small-top" src="assets/mirtilo.webp" alt="">
+                <img class="ice ice-small-bottom" src="assets/morango.webp" alt="">
+              </div>
             </div>
-            <canvas id="ice-canvas" aria-hidden="true"></canvas>
             <div class="flavor-controls">
               <div class="flavor-current"><span class="current-dot"></span><span id="current-name">LIMÃO &amp; HORTELÃ</span></div>
               <div class="selectors" aria-label="Selecionar sabor em destaque"></div>
-              <button class="pause" type="button" aria-label="Pausar rotação" title="Pausar rotação">
+              <button class="pause" type="button" aria-label="Pausar troca de sabores" title="Pausar troca de sabores">
                 <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path class="pause-icon" d="M8 6v8m4-8v8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path class="play-icon" d="m8 6 6 4-6 4z" fill="currentColor"/></svg>
               </button>
             </div>
