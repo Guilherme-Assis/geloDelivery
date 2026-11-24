@@ -1,4 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
+import ClipboardList from 'lucide-react-native/icons/clipboard-list';
 import ChevronRight from 'lucide-react-native/icons/chevron-right';
 import LogIn from 'lucide-react-native/icons/log-in';
 import LogOut from 'lucide-react-native/icons/log-out';
@@ -13,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { encodePath, mediaUrl } from '../catalog';
 import { blankProduct, fetchProducts, supabase } from './data';
 import ProductEditor from './ProductEditor';
+import AdminOrders from './AdminOrders';
 import { Button, Field, Notice, ink, ui } from './ui';
 
 const adminUrl = 'https://bravio-gelo.devguilhermeassis.chatgpt.site/?admin=1';
@@ -268,7 +270,7 @@ function Products({ editor, setEditor, wide }) {
   );
 }
 
-export default function AdminScreen({ goHome }) {
+export default function AdminScreen({ goHome, orders, goOrders, goProducts }) {
   const { width } = useWindowDimensions();
   const wide = width >= 960;
   const [session, setSession] = useState(undefined);
@@ -304,12 +306,13 @@ export default function AdminScreen({ goHome }) {
     return () => { mounted = false; };
   }, [account, attempt]);
 
+  const scrollTop = () => scroll.current?.scrollTo({ y: 0, animated: false });
   useEffect(() => {
-    scroll.current?.scrollTo({ y: 0, animated: false });
-  }, [editor]);
+    scrollTop();
+  }, [editor, orders]);
 
   const signOut = () => supabase.auth.signOut({ scope: 'local' });
-  const openProducts = () => setEditor(null);
+  const openProducts = () => { setEditor(null); goProducts(); };
   return (
     <SafeAreaView style={ui.safe}>
       <StatusBar style="dark" />
@@ -323,7 +326,8 @@ export default function AdminScreen({ goHome }) {
             <View style={ui.sidebar} accessibilityLabel="Navegação da administração">
               <View style={ui.sidebarBrand}><Brand /></View>
               <Text style={ui.navLabel}>Catálogo</Text>
-              <NavItem icon={Package} active onPress={openProducts}>Produtos</NavItem>
+              <NavItem icon={Package} active={!orders} onPress={openProducts}>Produtos</NavItem>
+              <NavItem icon={ClipboardList} active={orders} onPress={goOrders}>Pedidos</NavItem>
               <NavItem icon={Store} onPress={goHome}>Ver vitrine</NavItem>
               <View style={ui.sidebarBottom}>
                 <Text style={ui.accountEmail} numberOfLines={1}>{session.user.email}</Text>
@@ -338,7 +342,7 @@ export default function AdminScreen({ goHome }) {
                   <View style={ui.breadcrumb}>
                     <Text style={ui.breadcrumbText}>Catálogo</Text>
                     <ChevronRight size={16} strokeWidth={1.5} color={ink.muted} />
-                    <Text style={ui.breadcrumbCurrent}>{editor ? (editor.id ? 'Editar produto' : 'Novo produto') : 'Produtos'}</Text>
+                    <Text style={ui.breadcrumbCurrent}>{orders ? 'Pedidos' : editor ? (editor.id ? 'Editar produto' : 'Novo produto') : 'Produtos'}</Text>
                   </View>
                 ) : (
                   <>
@@ -351,8 +355,16 @@ export default function AdminScreen({ goHome }) {
                 )}
               </View>
             </View>
+            {!wide && permission === 'allowed' && (
+              <View style={[ui.bar, { flexDirection: 'row', gap: 8, padding: 8 }]}>
+                <NavItem icon={Package} active={!orders} onPress={openProducts}>Produtos</NavItem>
+                <NavItem icon={ClipboardList} active={orders} onPress={goOrders}>Pedidos</NavItem>
+              </View>
+            )}
             <ScrollView ref={scroll} style={ui.scroll} keyboardShouldPersistTaps="handled" contentContainerStyle={[ui.main, wide && ui.mainWide]}>
-              {permission === 'allowed' ? <Products editor={editor} setEditor={setEditor} wide={wide} /> :
+              {permission === 'allowed' ? (
+                orders ? <AdminOrders wide={wide} scrollTop={scrollTop} /> : <Products editor={editor} setEditor={setEditor} wide={wide} />
+              ) :
                 permission === 'denied' ? <Notice error>Este e-mail ainda não tem acesso à administração do catálogo.</Notice> :
                 permission === 'error' ? <View style={ui.fieldStack}>
                   <Notice error>Não foi possível verificar seu acesso ao painel.</Notice>

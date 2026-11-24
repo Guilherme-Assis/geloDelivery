@@ -2,23 +2,36 @@ import { useEffect, useState } from 'react';
 import { BackHandler, Platform } from 'react-native';
 
 const web = Platform.OS === 'web';
+export const cartHref = '?carrinho=1';
+export const checkoutHref = '?checkout=1';
+export const ordersHref = '?admin=1&secao=pedidos';
+export const productHref = slug => '?sabor=' + encodeURIComponent(slug);
 
-function readWebRoute() {
-  const params = new URLSearchParams(window.location.search);
-  const admin = params.get('admin') === '1';
-  const cart = !admin && params.get('carrinho') === '1';
+const paths = {
+  home: '', catalog: '#sabores', cart: cartHref,
+  checkout: checkoutHref, admin: '?admin=1', orders: ordersHref
+};
+
+function page(view, slug = null) {
   return {
-    admin, cart,
-    slug: admin || cart ? null : params.get('sabor'),
-    catalog: !admin && !cart && window.location.hash === '#sabores'
+    view, slug: view === 'product' ? slug : null, catalog: view === 'catalog',
+    admin: view === 'admin' || view === 'orders', cart: view === 'cart',
+    checkout: view === 'checkout', orders: view === 'orders'
   };
 }
 
-export const cartHref = '?carrinho=1';
-export const productHref = slug => '?sabor=' + encodeURIComponent(slug);
+function readWebRoute() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('admin') === '1') return page(params.get('secao') === 'pedidos' ? 'orders' : 'admin');
+  if (params.get('checkout') === '1') return page('checkout');
+  if (params.get('carrinho') === '1') return page('cart');
+  const slug = params.get('sabor');
+  if (slug) return page('product', slug);
+  return page(window.location.hash === '#sabores' ? 'catalog' : 'home');
+}
 
 export function useRoute() {
-  const [route, setRoute] = useState(() => web ? readWebRoute() : { slug: null, catalog: false, admin: false, cart: false });
+  const [route, setRoute] = useState(() => web ? readWebRoute() : page('home'));
 
   useEffect(() => {
     if (web) {
@@ -30,24 +43,25 @@ export function useRoute() {
         window.removeEventListener('hashchange', onLocationChange);
       };
     }
-
+    const previous = { product: 'catalog', cart: 'catalog', checkout: 'cart', orders: 'admin', admin: 'home' };
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (!route.slug && !route.admin && !route.cart) return false;
-      setRoute({ slug: null, catalog: Boolean(route.slug || route.cart), admin: false, cart: false });
+      const target = previous[route.view];
+      if (!target) return false;
+      setRoute(page(target));
       return true;
     });
     return () => subscription.remove();
-  }, [route.slug, route.admin, route.cart]);
+  }, [route.view]);
 
-  function navigate(slug, catalog = false, admin = false, cart = false) {
+  function navigate(view, slug) {
     if (web) {
-      const suffix = admin ? '?admin=1' : cart ? cartHref : slug ? productHref(slug) : catalog ? '#sabores' : '';
+      const suffix = view === 'product' ? productHref(slug) : paths[view];
       const url = window.location.pathname + suffix;
       if (url !== window.location.pathname + window.location.search + window.location.hash) {
         window.history.pushState(null, '', url);
       }
     }
-    setRoute({ slug, catalog, admin, cart });
+    setRoute(page(view, slug));
   }
 
   return { route, navigate };

@@ -5,7 +5,7 @@ import Trash2 from 'lucide-react-native/icons/trash-2';
 import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Link from '../Link';
 import { palette, styles } from '../styles';
-import { productHref } from '../useRoute';
+import { checkoutHref, productHref } from '../useRoute';
 
 const status = Platform.OS === 'web' ? { role: 'status' } : { accessibilityLiveRegion: 'polite' };
 const number = new Intl.NumberFormat('pt-BR');
@@ -77,9 +77,10 @@ function CartItem({ item, flavor, unavailable, cart, openProduct }) {
   );
 }
 
-export default function CartScreen({ cart, flavors, verified, error, retry, wrap, wide, goCatalog, openProduct }) {
+export default function CartScreen({ cart, flavors, verified, error, retry, wrap, wide, goCatalog, openProduct, goCheckout }) {
   const current = new Map(flavors.map(flavor => [flavor.productId, flavor]));
   const hasItems = cart.items?.length > 0;
+  const blocked = verified && cart.items?.some(item => !current.has(item.id));
   return (
     <View style={[styles.detail, basket.page, wrap]}>
       <Text accessibilityRole="header" aria-level={1} style={[styles.sectionHeading, !wide && styles.sectionHeadingCompact]}>Seu carrinho</Text>
@@ -111,6 +112,13 @@ export default function CartScreen({ cart, flavors, verified, error, retry, wrap
                 <Text style={styles.bodyText}>Pacotes</Text>
                 <Text {...status} style={basket.summaryNumber}>{number.format(cart.total)}</Text>
               </View>
+              {blocked ? (
+                <Text style={styles.bodyText}>Remova os sabores indisponíveis para finalizar.</Text>
+              ) : (
+                <Link href={checkoutHref} action={goCheckout} style={[styles.primary, basket.checkout]}>
+                  <Text style={styles.primaryText}>Finalizar pedido</Text>
+                </Link>
+              )}
               <Link href="./#sabores" action={goCatalog} style={basket.continue}>
                 <Text style={styles.actionText}>Continuar escolhendo</Text>
               </Link>
@@ -158,6 +166,7 @@ const basket = StyleSheet.create({
   summaryLine: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   summaryNumber: { color: palette.text, fontFamily: 'SpaceGrotesk', fontSize: 17, fontWeight: '700',
     fontVariant: ['tabular-nums'] },
+  checkout: { alignSelf: 'stretch', alignItems: 'center', marginTop: 4 },
   continue: { borderTopWidth: 1, borderTopColor: palette.line, paddingTop: 12, marginTop: 4 },
   empty: { alignItems: 'center', padding: 24, gap: 16 },
   emptyIcon: { width: 48, height: 48, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.tint },

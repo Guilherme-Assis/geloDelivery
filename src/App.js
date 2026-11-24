@@ -11,6 +11,7 @@ import ShoppingCart from 'lucide-react-native/icons/shopping-cart';
 import AdminScreen from './admin/AdminScreen';
 import CartScreen, { AddToCart } from './cart/CartScreen';
 import { useCart } from './cart/useCart';
+import CheckoutScreen from './checkout/CheckoutScreen';
 import Link from './Link';
 import { loadFlavors, slugPattern } from './catalog';
 import ModelPreview from './ModelPreview';
@@ -41,7 +42,7 @@ function Header({ wide, wrap, route, cart, goHome, goCatalog, goCart }) {
         <Brand goHome={goHome} />
         <View accessibilityLabel="Menu principal" style={styles.navigation}>
           {wide && (
-            <Link href="./" action={goHome} style={[styles.navLink, !route.slug && !route.catalog && !route.cart && styles.navActive]}>
+            <Link href="./" action={goHome} style={[styles.navLink, !route.slug && !route.catalog && !route.cart && !route.checkout && styles.navActive]}>
               <Text style={styles.navText}>Início</Text>
             </Link>
           )}
@@ -51,8 +52,8 @@ function Header({ wide, wrap, route, cart, goHome, goCatalog, goCart }) {
         </View>
         <Link href={cartHref} action={goCart}
           accessibilityLabel={'Carrinho, ' + countLabel}
-          aria-current={web && route.cart ? 'page' : undefined}
-          style={[styles.headerCart, route.cart && styles.headerCartActive]}>
+          aria-current={web && (route.cart || route.checkout) ? 'page' : undefined}
+          style={[styles.headerCart, (route.cart || route.checkout) && styles.headerCartActive]}>
           <ShoppingCart size={18} strokeWidth={1.75} color={palette.blue} />
           {wide && <Text style={styles.actionText}>Carrinho</Text>}
           <Text {...statusProps} style={styles.cartBadge} numberOfLines={1}>{cart.total > 99 ? '99+' : cart.total}</Text>
@@ -317,42 +318,42 @@ function Storefront() {
   const gap = wide ? 16 : 10;
   const cardWidth = (wrapWidth - gap * (columns - 1)) / columns;
   const retry = () => setAttempt(value => value + 1);
-  const data = result?.slug === route.slug && result?.cart === route.cart && result?.attempt === attempt ? result : null;
+  const data = result?.slug === route.slug && result?.view === route.view && result?.attempt === attempt ? result : null;
 
   useEffect(() => {
     if (route.admin) return;
-    const { slug, cart: onCart } = route;
+    const { slug, view } = route;
     if (slug && !slugPattern.test(slug)) {
-      setResult({ slug, cart: onCart, attempt, flavors: [] });
+      setResult({ slug, view, attempt, flavors: [] });
       return;
     }
     const controller = new AbortController();
     let current = true;
     const timeout = setTimeout(() => controller.abort(), 10000);
     loadFlavors(slug, controller.signal)
-      .then(flavors => { if (current) setResult({ slug, cart: onCart, attempt, flavors }); })
-      .catch(() => { if (current) setResult({ slug, cart: onCart, attempt, error: true }); })
+      .then(flavors => { if (current) setResult({ slug, view, attempt, flavors }); })
+      .catch(() => { if (current) setResult({ slug, view, attempt, error: true }); })
       .finally(() => clearTimeout(timeout));
     return () => {
       current = false;
       clearTimeout(timeout);
       controller.abort();
     };
-  }, [route.slug, route.admin, route.cart, attempt]);
+  }, [route.slug, route.admin, route.view, attempt]);
 
   useEffect(() => {
     if (!web) return;
     if (route.admin) {
-      document.title = 'Administração — JogGelo';
+      document.title = route.orders ? 'Pedidos — JogGelo' : 'Administração — JogGelo';
       return;
     }
-    if (route.cart) {
-      document.title = 'Carrinho — JogGelo';
+    if (route.cart || route.checkout) {
+      document.title = route.checkout ? 'Checkout — JogGelo' : 'Carrinho — JogGelo';
       return;
     }
     const name = data?.flavors?.[0]?.name;
     document.title = route.slug && data && !data.error ? (name || 'Sabor não encontrado') + ' — JogGelo' : homeTitle;
-  }, [route.slug, route.admin, route.cart, data]);
+  }, [route, data]);
 
   useEffect(() => {
     if (route.admin) return;
@@ -364,19 +365,23 @@ function Storefront() {
     return () => cancelAnimationFrame(frame);
   }, [route, catalogTop, wide]);
 
-  const goHome = () => navigate(null);
-  const goCatalog = () => navigate(null, true);
-  const goCart = () => navigate(null, false, false, true);
-  if (route.admin) return <AdminScreen goHome={goHome} />;
+  const goHome = () => navigate('home');
+  const goCatalog = () => navigate('catalog');
+  const goCart = () => navigate('cart');
+  const goCheckout = () => navigate('checkout');
+  if (route.admin) return <AdminScreen goHome={goHome} orders={route.orders}
+    goOrders={() => navigate('orders')} goProducts={() => navigate('admin')} />;
   const flavors = data?.flavors || [];
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
-      <ScrollView ref={scroll} stickyHeaderIndices={[0]} style={styles.page} contentContainerStyle={styles.pageContent}>
+      <ScrollView ref={scroll} keyboardShouldPersistTaps="handled" stickyHeaderIndices={[0]} style={styles.page} contentContainerStyle={styles.pageContent}>
         <Header wide={wide} wrap={wrap} route={route} cart={cart} goHome={goHome} goCatalog={goCatalog} goCart={goCart} />
-        {route.cart ? (
+        {route.checkout ? (
+          <CheckoutScreen cart={cart} flavors={flavors} wrap={wrap} wide={wide} goCart={goCart} goCatalog={goCatalog} />
+        ) : route.cart ? (
           <CartScreen cart={cart} flavors={flavors} verified={Boolean(data && !data.error)} error={data?.error}
-            retry={retry} wrap={wrap} wide={wide} goCatalog={goCatalog} openProduct={slug => navigate(slug)} />
+            retry={retry} wrap={wrap} wide={wide} goCatalog={goCatalog} openProduct={slug => navigate('product', slug)} goCheckout={goCheckout} />
         ) : route.slug ? (
           <Detail key={route.slug} flavor={flavors[0]} goCatalog={goCatalog} loading={!data} error={data?.error} retry={retry} wide={wide} width={width} wrap={wrap} cart={cart} />
         ) : (
@@ -394,7 +399,7 @@ function Storefront() {
                 data.error ? <LoadError retry={retry} /> :
                 !flavors.length ? <Text {...statusProps} style={styles.bodyText}>Nenhum sabor disponível no momento.</Text> : (
                   <View style={[styles.grid, { gap }]}>
-                    {flavors.map(flavor => <FlavorCard key={flavor.id} flavor={flavor} cardWidth={cardWidth} wide={wide} cart={cart} open={() => navigate(flavor.id)} />)}
+                    {flavors.map(flavor => <FlavorCard key={flavor.id} flavor={flavor} cardWidth={cardWidth} wide={wide} cart={cart} open={() => navigate('product', flavor.id)} />)}
                   </View>
                 )}
             </View>
@@ -405,7 +410,7 @@ function Storefront() {
             <Brand goHome={goHome} footer />
             <Link href={instagram} accessibilityLabel="JogGelo no Instagram"><Text style={styles.actionText}>@joggelo</Text></Link>
             <Link href="./#sabores" action={goCatalog}><Text style={styles.navText}>Todos os sabores</Text></Link>
-            <Link href="./?admin=1" action={() => navigate(null, false, true)}><Text style={styles.navText}>Administração</Text></Link>
+            <Link href="./?admin=1" action={() => navigate('admin')}><Text style={styles.navText}>Administração</Text></Link>
           </View>
         </View>
       </ScrollView>

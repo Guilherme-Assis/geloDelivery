@@ -111,6 +111,13 @@ export function useCart() {
     change(current => current.filter(item => item.id !== id));
   }
 
+  function complete(ordered) {
+    const quantities = new Map(ordered.map(item => [item.id, item.quantity]));
+    change(current => current.map(item => ({
+      ...item, quantity: item.quantity - (quantities.get(item.id) || 0)
+    })).filter(item => item.quantity > 0));
+  }
+
   const total = items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
-  return { items, total, storageError, add, adjust, remove };
+  return { items, total, storageError, add, adjust, remove, complete };
 }
