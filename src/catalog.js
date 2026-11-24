@@ -12,7 +12,7 @@ export function encodePath(path) {
 }
 
 export async function loadFlavors(slug, signal) {
-  const fields = 'slug,nome,resumo,descricao,cor_destaque,sugestoes_drinks,imagem_path,modelo_3d_path,em_destaque';
+  const fields = 'id,slug,nome,resumo,descricao,cor_destaque,sugestoes_drinks,imagem_path,modelo_3d_path,em_destaque';
   const selection = slug ? 'slug=eq.' + encodeURIComponent(slug) : 'order=ordem.asc,slug.asc';
   const response = await fetch(supabaseUrl + '/rest/v1/produtos?select=' + fields + '&ativo=eq.true&' + selection, {
     headers: { apikey: publishableKey },
@@ -24,6 +24,7 @@ export async function loadFlavors(slug, signal) {
     const image = encodePath(record.imagem_path);
     return {
       id: record.slug,
+      productId: record.id,
       name: record.nome,
       summary: record.resumo,
       description: record.descricao,

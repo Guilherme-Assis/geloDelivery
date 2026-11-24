@@ -3,40 +3,25 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  AccessibilityInfo, Animated, AppState, Image, Linking, Platform, Pressable,
+  AccessibilityInfo, Animated, AppState, Image, Platform, Pressable,
   ScrollView, Text, View, useWindowDimensions
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import ShoppingCart from 'lucide-react-native/icons/shopping-cart';
 import AdminScreen from './admin/AdminScreen';
+import CartScreen, { AddToCart } from './cart/CartScreen';
+import { useCart } from './cart/useCart';
+import Link from './Link';
 import { loadFlavors, slugPattern } from './catalog';
 import ModelPreview from './ModelPreview';
 import { palette, styles } from './styles';
-import { productHref, useRoute } from './useRoute';
+import { cartHref, productHref, useRoute } from './useRoute';
 
 const logo = require('../assets/joggelo-logo.webp');
 const web = Platform.OS === 'web';
 const instagram = 'https://www.instagram.com/joggelo/';
 const homeTitle = 'JogGelo — Gelo para drinks';
 const statusProps = web ? { role: 'status' } : { accessibilityLiveRegion: 'polite' };
-
-function Link({ href, action, style, children, ...props }) {
-  return (
-    <Pressable
-      {...props}
-      {...(web ? { href } : {})}
-      accessibilityRole="link"
-      onPress={event => {
-        if (web && (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)) return;
-        event.preventDefault?.();
-        if (action) action();
-        else Linking.openURL(href).catch(() => {});
-      }}
-      style={state => [style, state.pressed && styles.pressed]}
-    >
-      {children}
-    </Pressable>
-  );
-}
 
 function Brand({ goHome, footer = false }) {
   return (
@@ -47,24 +32,31 @@ function Brand({ goHome, footer = false }) {
   );
 }
 
-function Header({ wide, wrap, route, goHome, goCatalog }) {
+function Header({ wide, wrap, route, cart, goHome, goCatalog, goCart }) {
+  const countLabel = cart.total === 1 ? '1 pacote' : cart.total + ' pacotes';
+
   return (
     <View style={styles.header}>
       <View style={[styles.headerRow, !wide && styles.headerCompact, wrap]}>
         <Brand goHome={goHome} />
         <View accessibilityLabel="Menu principal" style={styles.navigation}>
-          <Link href="./" action={goHome} style={[styles.navLink, !route.slug && !route.catalog && styles.navActive]}>
-            <Text style={styles.navText}>Início</Text>
-          </Link>
+          {wide && (
+            <Link href="./" action={goHome} style={[styles.navLink, !route.slug && !route.catalog && !route.cart && styles.navActive]}>
+              <Text style={styles.navText}>Início</Text>
+            </Link>
+          )}
           <Link href="./#sabores" action={goCatalog} style={[styles.navLink, (route.slug || route.catalog) && styles.navActive]}>
             <Text style={styles.navText}>Sabores</Text>
           </Link>
         </View>
-        {wide && (
-          <Link href="./#sabores" action={goCatalog} style={styles.headerCta}>
-            <Text style={styles.actionText}>Explore os sabores  ✳</Text>
-          </Link>
-        )}
+        <Link href={cartHref} action={goCart}
+          accessibilityLabel={'Carrinho, ' + countLabel}
+          aria-current={web && route.cart ? 'page' : undefined}
+          style={[styles.headerCart, route.cart && styles.headerCartActive]}>
+          <ShoppingCart size={18} strokeWidth={1.75} color={palette.blue} />
+          {wide && <Text style={styles.actionText}>Carrinho</Text>}
+          <Text {...statusProps} style={styles.cartBadge} numberOfLines={1}>{cart.total > 99 ? '99+' : cart.total}</Text>
+        </Link>
       </View>
     </View>
   );
@@ -221,23 +213,28 @@ function Showcase({ featured, height, wide }) {
   );
 }
 
-function FlavorCard({ flavor, cardWidth, wide, open }) {
+function FlavorCard({ flavor, cardWidth, wide, open, cart }) {
   return (
-    <Link href={productHref(flavor.id)} action={open} style={[styles.card, { width: cardWidth }]} {...(web ? { dataSet: { flavorCard: "true" } } : {})}>
-      <View style={[styles.cardArt, { height: wide ? 185 : Math.min(210, Math.max(110, cardWidth * 0.72)) }]}>
-        <View style={[styles.cardOrbit, { borderColor: flavor.color }]} />
-        {flavor.imageUrl && <Image source={{ uri: flavor.imageUrl }} style={styles.cardPackage} resizeMode="contain" />}
+    <View style={[styles.card, { width: cardWidth }]} {...(web ? { dataSet: { flavorCard: 'true' } } : {})}>
+      <Link href={productHref(flavor.id)} action={open} style={styles.cardDetails}>
+        <View style={[styles.cardArt, { height: wide ? 185 : Math.min(210, Math.max(110, cardWidth * 0.72)) }]}>
+          <View style={[styles.cardOrbit, { borderColor: flavor.color }]} />
+          {flavor.imageUrl && <Image source={{ uri: flavor.imageUrl }} style={styles.cardPackage} resizeMode="contain" />}
+        </View>
+        <View style={styles.cardContent}>
+          <Text accessibilityRole="header" aria-level={3} style={styles.cardTitle}>{flavor.name}</Text>
+          <Text style={styles.cardSummary}>{flavor.summary}</Text>
+          <Text style={styles.cardLink}>Ver detalhes</Text>
+        </View>
+      </Link>
+      <View style={styles.cardActions}>
+        <AddToCart flavor={flavor} cart={cart} compact={cardWidth < 195} />
       </View>
-      <View style={styles.cardContent}>
-        <Text accessibilityRole="header" aria-level={3} style={styles.cardTitle}>{flavor.name}</Text>
-        <Text style={styles.cardSummary}>{flavor.summary}</Text>
-        <Text style={styles.cardLink}>Ver detalhes  +</Text>
-      </View>
-    </Link>
+    </View>
   );
 }
 
-function Detail({ flavor, goCatalog, loading, error, retry, wide, width, wrap }) {
+function Detail({ flavor, goCatalog, loading, error, retry, wide, width, wrap, cart }) {
   const [showModel, setShowModel] = useState(false);
   const [modelError, setModelError] = useState(false);
   const handleModelError = useCallback(() => {
@@ -278,6 +275,7 @@ function Detail({ flavor, goCatalog, loading, error, retry, wide, width, wrap })
               <Eyebrow>GELO SABORIZADO</Eyebrow>
               <Text accessibilityRole="header" aria-level={1} style={styles.sectionHeading}>{flavor.name}</Text>
               <Text style={styles.detailDescription}>{flavor.description}</Text>
+              <AddToCart flavor={flavor} cart={cart} />
               {flavor.pairings.length > 0 && (
                 <View style={styles.pairings}>
                   <Text accessibilityRole="header" aria-level={2} style={styles.pairingsHeading}>Experimente com</Text>
@@ -307,6 +305,7 @@ function LoadError({ detail = false, retry }) {
 function Storefront() {
   const { width } = useWindowDimensions();
   const { route, navigate } = useRoute();
+  const cart = useCart();
   const [result, setResult] = useState(null);
   const [attempt, setAttempt] = useState(0);
   const [catalogTop, setCatalogTop] = useState(null);
@@ -318,28 +317,28 @@ function Storefront() {
   const gap = wide ? 16 : 10;
   const cardWidth = (wrapWidth - gap * (columns - 1)) / columns;
   const retry = () => setAttempt(value => value + 1);
-  const data = result?.slug === route.slug && result?.attempt === attempt ? result : null;
+  const data = result?.slug === route.slug && result?.cart === route.cart && result?.attempt === attempt ? result : null;
 
   useEffect(() => {
     if (route.admin) return;
-    const slug = route.slug;
+    const { slug, cart: onCart } = route;
     if (slug && !slugPattern.test(slug)) {
-      setResult({ slug, attempt, flavors: [] });
+      setResult({ slug, cart: onCart, attempt, flavors: [] });
       return;
     }
     const controller = new AbortController();
     let current = true;
     const timeout = setTimeout(() => controller.abort(), 10000);
     loadFlavors(slug, controller.signal)
-      .then(flavors => { if (current) setResult({ slug, attempt, flavors }); })
-      .catch(() => { if (current) setResult({ slug, attempt, error: true }); })
+      .then(flavors => { if (current) setResult({ slug, cart: onCart, attempt, flavors }); })
+      .catch(() => { if (current) setResult({ slug, cart: onCart, attempt, error: true }); })
       .finally(() => clearTimeout(timeout));
     return () => {
       current = false;
       clearTimeout(timeout);
       controller.abort();
     };
-  }, [route.slug, route.admin, attempt]);
+  }, [route.slug, route.admin, route.cart, attempt]);
 
   useEffect(() => {
     if (!web) return;
@@ -347,30 +346,39 @@ function Storefront() {
       document.title = 'Administração — JogGelo';
       return;
     }
+    if (route.cart) {
+      document.title = 'Carrinho — JogGelo';
+      return;
+    }
     const name = data?.flavors?.[0]?.name;
     document.title = route.slug && data && !data.error ? (name || 'Sabor não encontrado') + ' — JogGelo' : homeTitle;
-  }, [route.slug, route.admin, data]);
+  }, [route.slug, route.admin, route.cart, data]);
 
   useEffect(() => {
     if (route.admin) return;
     if (!route.slug && route.catalog && catalogTop === null) return;
     const frame = requestAnimationFrame(() => {
-      scroll.current?.scrollTo({ y: !route.slug && route.catalog ? catalogTop : 0, animated: false });
+      const y = !route.slug && route.catalog ? Math.max(0, catalogTop - (wide ? 76 : 63)) : 0;
+      scroll.current?.scrollTo({ y, animated: false });
     });
     return () => cancelAnimationFrame(frame);
-  }, [route, catalogTop]);
+  }, [route, catalogTop, wide]);
 
   const goHome = () => navigate(null);
   const goCatalog = () => navigate(null, true);
+  const goCart = () => navigate(null, false, false, true);
   if (route.admin) return <AdminScreen goHome={goHome} />;
   const flavors = data?.flavors || [];
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
-      <ScrollView ref={scroll} style={styles.page} contentContainerStyle={styles.pageContent}>
-        <Header wide={wide} wrap={wrap} route={route} goHome={goHome} goCatalog={goCatalog} />
-        {route.slug ? (
-          <Detail key={route.slug} flavor={flavors[0]} goCatalog={goCatalog} loading={!data} error={data?.error} retry={retry} wide={wide} width={width} wrap={wrap} />
+      <ScrollView ref={scroll} stickyHeaderIndices={[0]} style={styles.page} contentContainerStyle={styles.pageContent}>
+        <Header wide={wide} wrap={wrap} route={route} cart={cart} goHome={goHome} goCatalog={goCatalog} goCart={goCart} />
+        {route.cart ? (
+          <CartScreen cart={cart} flavors={flavors} verified={Boolean(data && !data.error)} error={data?.error}
+            retry={retry} wrap={wrap} wide={wide} goCatalog={goCatalog} openProduct={slug => navigate(slug)} />
+        ) : route.slug ? (
+          <Detail key={route.slug} flavor={flavors[0]} goCatalog={goCatalog} loading={!data} error={data?.error} retry={retry} wide={wide} width={width} wrap={wrap} cart={cart} />
         ) : (
           <>
             <Hero featured={flavors.filter(flavor => flavor.featured).slice(0, 5)} goCatalog={goCatalog} wide={wide} width={width} wrap={wrap} />
@@ -386,7 +394,7 @@ function Storefront() {
                 data.error ? <LoadError retry={retry} /> :
                 !flavors.length ? <Text {...statusProps} style={styles.bodyText}>Nenhum sabor disponível no momento.</Text> : (
                   <View style={[styles.grid, { gap }]}>
-                    {flavors.map(flavor => <FlavorCard key={flavor.id} flavor={flavor} cardWidth={cardWidth} wide={wide} open={() => navigate(flavor.id)} />)}
+                    {flavors.map(flavor => <FlavorCard key={flavor.id} flavor={flavor} cardWidth={cardWidth} wide={wide} cart={cart} open={() => navigate(flavor.id)} />)}
                   </View>
                 )}
             </View>
