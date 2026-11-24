@@ -15,3 +15,5 @@ O catálogo lê os produtos ativos de `public.produtos` e carrega as fotos do bu
 Abra **Administração** no rodapé da vitrine ou acesse `/?admin=1` na web. No primeiro acesso, cadastre a conta com um e-mail autorizado, confirme o endereço e entre com a senha escolhida.
 
 O painel permite cadastrar, editar e desativar produtos, controlar ordem e destaque e enviar imagens ou modelos GLB. As permissões são verificadas no Supabase. Os e-mails autorizados ficam em `joggelo_private.catalog_admin_emails` e são definidos pelo responsável pelo banco. A confirmação por e-mail deve permanecer ativa no Supabase Auth.
+
+O desenho do painel segue o [Unslop](https://github.com/heydamir/unslop), de Damir Sokolovsky (CC BY 4.0).

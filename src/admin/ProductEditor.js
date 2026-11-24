@@ -1,9 +1,12 @@
+import ImagePlus from 'lucide-react-native/icons/image-plus';
+import List from 'lucide-react-native/icons/list';
+import Save from 'lucide-react-native/icons/save';
+import Upload from 'lucide-react-native/icons/upload';
 import { useEffect, useState } from 'react';
 import { Image, Switch, Text, View, useWindowDimensions } from 'react-native';
 import { encodePath, mediaUrl, slugPattern } from '../catalog';
-import { palette } from '../styles';
 import { makeSlug, pickMedia, saveProduct } from './data';
-import { Button, Field, Notice, ui } from './ui';
+import { Button, Field, Notice, ink, ui } from './ui';
 
 export default function ProductEditor({ product, cancel, saved }) {
   const { width } = useWindowDimensions();
@@ -80,15 +83,30 @@ export default function ProductEditor({ product, cancel, saved }) {
     }
   }
 
+  const wide = width >= 1120;
+  const saveButton = (
+    <Button icon={Save} busy={Boolean(progress)} disabled={picking} onPress={save}>
+      {progress || 'Salvar produto'}
+    </Button>
+  );
+
   return (
     <>
       <View style={[ui.row, ui.between]}>
-        <Text accessibilityRole="header" aria-level={1} style={ui.title}>{product.id ? 'Editar produto' : 'Novo produto'}</Text>
-        <Button secondary disabled={busy} onPress={cancel}>Voltar à lista</Button>
+        <View>
+          <Text accessibilityRole="header" aria-level={1} style={ui.title}>{product.id ? 'Editar produto' : 'Novo produto'}</Text>
+          {product.id ? <Text style={ui.meta}>{product.nome}</Text> : null}
+        </View>
+        <View style={ui.row}>
+          <Button secondary icon={List} disabled={busy} onPress={cancel}>Voltar à lista</Button>
+          {wide && saveButton}
+        </View>
       </View>
-      <View style={[ui.panel, ui.form]}>
-        <View style={[ui.formColumns, width > 780 && ui.formWide]}>
-          <View style={width > 780 && ui.formLeft}>
+      {wide && error ? <View style={ui.formFooter}><Notice error>{error}</Notice></View> : null}
+      <View style={[ui.formColumns, wide && ui.formWide]}>
+        <View style={[ui.fieldStack, wide && ui.formLeft]}>
+          <View style={[ui.panel, ui.section]}>
+            <Text accessibilityRole="header" aria-level={2} style={ui.subtitle}>Informações do sabor</Text>
             <Field label="Nome do sabor" value={draft.nome} editable={!busy} onChangeText={changeName} />
             <Field label="Endereço do produto (slug)" value={draft.slug} editable={!busy} autoCapitalize="none" autoCorrect={false}
               onChangeText={value => { setCustomSlug(true); change('slug', value); }} />
@@ -96,45 +114,57 @@ export default function ProductEditor({ product, cancel, saved }) {
             <Field label="Descrição" value={draft.descricao} multiline editable={!busy} onChangeText={value => change('descricao', value)} />
             <Field label="Sugestões de drinks (uma por linha)" value={draft.sugestoes_drinks} multiline editable={!busy}
               onChangeText={value => change('sugestoes_drinks', value)} />
-            <Field label="Ordem no catálogo" value={draft.ordem} keyboardType="number-pad" editable={!busy} onChangeText={value => change('ordem', value)} />
-            <Field label="Cor de destaque" value={draft.cor_destaque} autoCapitalize="none" editable={!busy} onChangeText={value => change('cor_destaque', value)} />
           </View>
-          <View style={width > 780 && ui.formRight}>
+          <View style={[ui.panel, ui.section]}>
+            <Text accessibilityRole="header" aria-level={2} style={ui.subtitle}>Apresentação na vitrine</Text>
+            <Field label="Ordem no catálogo" value={draft.ordem} keyboardType="number-pad" editable={!busy}
+              onChangeText={value => change('ordem', value)} />
+            <Field label="Cor de destaque" value={draft.cor_destaque} autoCapitalize="none" editable={!busy}
+              onChangeText={value => change('cor_destaque', value)} />
+          </View>
+        </View>
+        <View style={[ui.fieldStack, wide && ui.formRight]}>
+          <View style={[ui.panel, ui.section]}>
+            <Text accessibilityRole="header" aria-level={2} style={ui.subtitle}>Embalagem</Text>
+            {!!preview && <Image accessibilityLabel="Prévia da embalagem" source={{ uri: preview }} style={ui.preview} resizeMode="contain" />}
             <View style={ui.media}>
-              <Text style={ui.subtitle}>Embalagem</Text>
-              {!!preview && <Image accessibilityLabel="Prévia da embalagem" source={{ uri: preview }} style={ui.preview} resizeMode="contain" />}
-              <Button secondary disabled={busy} onPress={() => choose('image')}>{preview ? 'Trocar imagem' : 'Escolher imagem'}</Button>
+              <Button secondary icon={ImagePlus} disabled={busy} onPress={() => choose('image')}>{preview ? 'Trocar imagem' : 'Escolher imagem'}</Button>
               {!!image && <Text style={ui.body}>{image.name}</Text>}
-              <Text style={ui.body}>JPG, PNG ou WebP, até 6 MB.</Text>
+              <Text style={ui.meta}>JPG, PNG ou WebP, até 6 MB</Text>
             </View>
             <View style={ui.media}>
-              <Text style={ui.subtitle}>Modelo 3D</Text>
-              <Text style={ui.body}>{model?.name || draft.modelo_3d_path?.split('/').pop() || 'Nenhum modelo selecionado.'}</Text>
-              <Button secondary disabled={busy} onPress={() => choose('model')}>Escolher GLB</Button>
+              <Text style={ui.label}>Modelo 3D</Text>
+              <Text style={ui.meta}>{model?.name || draft.modelo_3d_path?.split('/').pop() || 'Sem modelo 3D'}</Text>
+              <Button secondary icon={Upload} disabled={busy} onPress={() => choose('model')}>Escolher GLB</Button>
               {(model || draft.modelo_3d_path) && (
-                <Button secondary disabled={busy} onPress={() => { setModel(null); change('modelo_3d_path', null); }}>Remover do produto</Button>
+                <Button quiet disabled={busy} onPress={() => { setModel(null); change('modelo_3d_path', null); }}>Remover do produto</Button>
               )}
             </View>
+          </View>
+          <View style={[ui.panel, ui.section]}>
+            <Text accessibilityRole="header" aria-level={2} style={ui.subtitle}>Publicação</Text>
             <View style={ui.switches}>
               <View style={ui.switchRow}>
                 <Text style={ui.label}>Produto ativo</Text>
                 <Switch accessibilityLabel="Produto ativo" disabled={busy} value={draft.ativo}
-                  onValueChange={value => change('ativo', value)} trackColor={{ true: palette.cyan }} />
+                  onValueChange={value => change('ativo', value)} trackColor={{ true: ink.accent }} />
               </View>
               <View style={ui.switchRow}>
                 <Text style={ui.label}>Em destaque na home</Text>
                 <Switch accessibilityLabel="Em destaque na home" disabled={busy} value={draft.em_destaque}
-                  onValueChange={value => change('em_destaque', value)} trackColor={{ true: palette.cyan }} />
+                  onValueChange={value => change('em_destaque', value)} trackColor={{ true: ink.accent }} />
               </View>
-              <Text style={ui.body}>A home mostra até cinco produtos ativos em destaque, pela ordem do catálogo.</Text>
+              <Text style={ui.meta}>A home mostra até cinco produtos ativos em destaque, pela ordem do catálogo.</Text>
             </View>
           </View>
         </View>
-        <Notice error>{error}</Notice>
-        <Button busy={Boolean(progress)} disabled={picking} onPress={save} style={{ alignSelf: 'flex-start', marginTop: 14 }}>
-          {progress || 'Salvar produto'}
-        </Button>
       </View>
+      {!wide ? (
+        <View style={ui.formFooter}>
+          <Notice error>{error}</Notice>
+          {saveButton}
+        </View>
+      ) : null}
     </>
   );
 }
