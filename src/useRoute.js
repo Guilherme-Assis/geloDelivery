@@ -5,24 +5,29 @@ const web = Platform.OS === 'web';
 export const cartHref = '?carrinho=1';
 export const checkoutHref = '?checkout=1';
 export const ordersHref = '?admin=1&secao=pedidos';
+export const financeHref = '?admin=1&secao=financeiro';
 export const productHref = slug => '?sabor=' + encodeURIComponent(slug);
 
 const paths = {
   home: '', catalog: '#sabores', cart: cartHref,
-  checkout: checkoutHref, admin: '?admin=1', orders: ordersHref
+  checkout: checkoutHref, admin: '?admin=1', orders: ordersHref, finance: financeHref
 };
 
 function page(view, slug = null) {
   return {
     view, slug: view === 'product' ? slug : null, catalog: view === 'catalog',
-    admin: view === 'admin' || view === 'orders', cart: view === 'cart',
-    checkout: view === 'checkout', orders: view === 'orders'
+    admin: view === 'admin' || view === 'orders' || view === 'finance', cart: view === 'cart',
+    checkout: view === 'checkout', orders: view === 'orders', finance: view === 'finance'
   };
 }
 
 function readWebRoute() {
   const params = new URLSearchParams(window.location.search);
-  if (params.get('admin') === '1') return page(params.get('secao') === 'pedidos' ? 'orders' : 'admin');
+  if (params.get('admin') === '1') {
+    const section = params.get('secao');
+    if (section === 'financeiro') return page('finance');
+    return page(section === 'pedidos' ? 'orders' : 'admin');
+  }
   if (params.get('checkout') === '1') return page('checkout');
   if (params.get('carrinho') === '1') return page('cart');
   const slug = params.get('sabor');
@@ -43,7 +48,7 @@ export function useRoute() {
         window.removeEventListener('hashchange', onLocationChange);
       };
     }
-    const previous = { product: 'catalog', cart: 'catalog', checkout: 'cart', orders: 'admin', admin: 'home' };
+    const previous = { product: 'catalog', cart: 'catalog', checkout: 'cart', orders: 'admin', finance: 'admin', admin: 'home' };
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
       const target = previous[route.view];
       if (!target) return false;

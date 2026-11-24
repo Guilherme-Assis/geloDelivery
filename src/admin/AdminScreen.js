@@ -1,3 +1,4 @@
+import Wallet from 'lucide-react-native/icons/wallet';
 import { StatusBar } from 'expo-status-bar';
 import ClipboardList from 'lucide-react-native/icons/clipboard-list';
 import ChevronRight from 'lucide-react-native/icons/chevron-right';
@@ -15,6 +16,7 @@ import { encodePath, mediaUrl } from '../catalog';
 import { blankProduct, fetchProducts, supabase } from './data';
 import ProductEditor from './ProductEditor';
 import AdminOrders from './AdminOrders';
+import AdminFinance from './AdminFinance';
 import { Button, Field, Notice, ink, ui } from './ui';
 
 const adminUrl = 'https://bravio-gelo.devguilhermeassis.chatgpt.site/?admin=1';
@@ -270,7 +272,7 @@ function Products({ editor, setEditor, wide }) {
   );
 }
 
-export default function AdminScreen({ goHome, orders, goOrders, goProducts }) {
+export default function AdminScreen({ goHome, orders, finance, goOrders, goFinance, goProducts }) {
   const { width } = useWindowDimensions();
   const wide = width >= 960;
   const [session, setSession] = useState(undefined);
@@ -309,7 +311,7 @@ export default function AdminScreen({ goHome, orders, goOrders, goProducts }) {
   const scrollTop = () => scroll.current?.scrollTo({ y: 0, animated: false });
   useEffect(() => {
     scrollTop();
-  }, [editor, orders]);
+  }, [editor, orders, finance]);
 
   const signOut = () => supabase.auth.signOut({ scope: 'local' });
   const openProducts = () => { setEditor(null); goProducts(); };
@@ -326,8 +328,9 @@ export default function AdminScreen({ goHome, orders, goOrders, goProducts }) {
             <View style={ui.sidebar} accessibilityLabel="Navegação da administração">
               <View style={ui.sidebarBrand}><Brand /></View>
               <Text style={ui.navLabel}>Catálogo</Text>
-              <NavItem icon={Package} active={!orders} onPress={openProducts}>Produtos</NavItem>
+              <NavItem icon={Package} active={!orders && !finance} onPress={openProducts}>Produtos</NavItem>
               <NavItem icon={ClipboardList} active={orders} onPress={goOrders}>Pedidos</NavItem>
+              <NavItem icon={Wallet} active={finance} onPress={goFinance}>Financeiro</NavItem>
               <NavItem icon={Store} onPress={goHome}>Ver vitrine</NavItem>
               <View style={ui.sidebarBottom}>
                 <Text style={ui.accountEmail} numberOfLines={1}>{session.user.email}</Text>
@@ -342,7 +345,7 @@ export default function AdminScreen({ goHome, orders, goOrders, goProducts }) {
                   <View style={ui.breadcrumb}>
                     <Text style={ui.breadcrumbText}>Catálogo</Text>
                     <ChevronRight size={16} strokeWidth={1.5} color={ink.muted} />
-                    <Text style={ui.breadcrumbCurrent}>{orders ? 'Pedidos' : editor ? (editor.id ? 'Editar produto' : 'Novo produto') : 'Produtos'}</Text>
+                    <Text style={ui.breadcrumbCurrent}>{finance ? 'Financeiro' : orders ? 'Pedidos' : editor ? (editor.id ? 'Editar produto' : 'Novo produto') : 'Produtos'}</Text>
                   </View>
                 ) : (
                   <>
@@ -357,13 +360,15 @@ export default function AdminScreen({ goHome, orders, goOrders, goProducts }) {
             </View>
             {!wide && permission === 'allowed' && (
               <View style={[ui.bar, { flexDirection: 'row', gap: 8, padding: 8 }]}>
-                <NavItem icon={Package} active={!orders} onPress={openProducts}>Produtos</NavItem>
+                <NavItem icon={Package} active={!orders && !finance} onPress={openProducts}>Produtos</NavItem>
                 <NavItem icon={ClipboardList} active={orders} onPress={goOrders}>Pedidos</NavItem>
+                <NavItem icon={Wallet} active={finance} onPress={goFinance}>Financeiro</NavItem>
               </View>
             )}
             <ScrollView ref={scroll} style={ui.scroll} keyboardShouldPersistTaps="handled" contentContainerStyle={[ui.main, wide && ui.mainWide]}>
               {permission === 'allowed' ? (
-                orders ? <AdminOrders wide={wide} scrollTop={scrollTop} /> : <Products editor={editor} setEditor={setEditor} wide={wide} />
+                finance ? <AdminFinance wide={wide} scrollTop={scrollTop} /> :
+                  orders ? <AdminOrders wide={wide} scrollTop={scrollTop} /> : <Products editor={editor} setEditor={setEditor} wide={wide} />
               ) :
                 permission === 'denied' ? <Notice error>Este e-mail ainda não tem acesso à administração do catálogo.</Notice> :
                 permission === 'error' ? <View style={ui.fieldStack}>

@@ -344,7 +344,7 @@ function Storefront() {
   useEffect(() => {
     if (!web) return;
     if (route.admin) {
-      document.title = route.orders ? 'Pedidos — JogGelo' : 'Administração — JogGelo';
+      document.title = route.finance ? 'Financeiro — JogGelo' : route.orders ? 'Pedidos — JogGelo' : 'Administração — JogGelo';
       return;
     }
     if (route.cart || route.checkout) {
@@ -369,8 +369,8 @@ function Storefront() {
   const goCatalog = () => navigate('catalog');
   const goCart = () => navigate('cart');
   const goCheckout = () => navigate('checkout');
-  if (route.admin) return <AdminScreen goHome={goHome} orders={route.orders}
-    goOrders={() => navigate('orders')} goProducts={() => navigate('admin')} />;
+  if (route.admin) return <AdminScreen goHome={goHome} orders={route.orders} finance={route.finance}
+    goOrders={() => navigate('orders')} goFinance={() => navigate('finance')} goProducts={() => navigate('admin')} />;
   const flavors = data?.flavors || [];
   return (
     <SafeAreaView style={styles.safeArea}>
