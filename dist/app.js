@@ -1,5 +1,11 @@
 const flavors = [
   {
+    id: 'maca-verde', name: 'Maçã Verde', color: '#c5f080',
+    summary: 'Frutado e refrescante, com acidez de maçã verde.',
+    description: 'A acidez da maçã verde traz frescor ao copo. Experimente com bases leves ou bebidas com gás para destacar o sabor da fruta.',
+    pairings: ['Gin tônica', 'Vodca com soda', 'Água com gás']
+  },
+  {
     id: 'lima', name: 'Limão & Hortelã', color: '#c4f18d',
     summary: 'Cítrico e refrescante, com um toque herbal.',
     description: 'O frescor da hortelã encontra a acidez do limão. A combinação deixa espaço para o sabor do drink e funciona especialmente bem com bebidas mais leves.',
@@ -31,7 +37,7 @@ const stage = document.querySelector('#showcase');
 const currentName = document.querySelector('#current-name');
 const pause = document.querySelector('.pause');
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
-const imagePath = flavor => `assets/${flavor.id}.webp`;
+const imagePath = flavor => `assets/pacote-${flavor.id}.webp`;
 const detailPath = flavor => `?sabor=${flavor.id}`;
 
 document.querySelector('#flavor-grid').innerHTML = flavors.map(flavor => `
@@ -47,8 +53,8 @@ let timer;
 let inView = true;
 const displayDuration = 5300;
 
-const iceStage = stage.querySelector('.ice-stage');
-const firstSlide = iceStage.querySelector('.ice-set');
+const packageStage = stage.querySelector('.package-stage');
+const firstSlide = packageStage.querySelector('.package-slide');
 const slides = flavors.map((_, index) => {
   if (index === 0) return firstSlide;
   const slide = firstSlide.cloneNode(true);
@@ -56,7 +62,7 @@ const slides = flavors.map((_, index) => {
   slide.querySelectorAll('img').forEach((image, offset) => {
     image.src = imagePath(flavors[(index + offset) % flavors.length]);
   });
-  iceStage.append(slide);
+  packageStage.append(slide);
   return slide;
 });
 
@@ -121,7 +127,12 @@ if (requested) {
     detail.innerHTML = `
       <a class="back" href="./#sabores">Todos os sabores</a>
       <div class="detail-layout" style="--flavor:${flavor.color}">
-        <div class="detail-art"><img src="${imagePath(flavor)}" alt="Cubo de gelo sabor ${flavor.name}"></div>
+        <div class="detail-art">
+          <img src="${imagePath(flavor)}" alt="Embalagem de gelo sabor ${flavor.name}">
+          <div class="detail-model" id="detail-model" hidden></div>
+          <button class="model-toggle" type="button" aria-controls="detail-model" aria-expanded="false">Ver em 3D</button>
+          <p class="model-status" role="status" hidden></p>
+        </div>
         <div class="detail-copy">
           <p class="eyebrow"><span></span> GELO SABORIZADO</p>
           <h1>${flavor.name}</h1>
@@ -131,6 +142,7 @@ if (requested) {
           </div>
         </div>
       </div>`;
+    setupModel(flavor);
   } else {
     document.title = 'Sabor não encontrado — BRAVIO®';
     detail.innerHTML = '<a class="back" href="./#sabores">Todos os sabores</a><h1>Sabor não encontrado</h1>';
@@ -150,4 +162,56 @@ if (requested) {
     inView = entry.isIntersecting;
     schedule();
   }).observe(stage);
+}
+
+function setupModel(flavor) {
+  const art = detail.querySelector('.detail-art');
+  const poster = art.querySelector('img');
+  const container = art.querySelector('.detail-model');
+  const button = art.querySelector('.model-toggle');
+  const status = art.querySelector('.model-status');
+  let viewer;
+
+  function showModel(show) {
+    poster.hidden = show;
+    container.hidden = !show;
+    button.textContent = show ? 'Voltar à imagem' : 'Ver em 3D';
+    button.setAttribute('aria-expanded', String(show));
+  }
+
+  function showError() {
+    viewer?.remove();
+    viewer = undefined;
+    showModel(false);
+    status.textContent = 'Não foi possível carregar a visualização 3D.';
+    status.hidden = false;
+  }
+
+  button.addEventListener('click', async () => {
+    if (viewer) {
+      showModel(container.hidden);
+      return;
+    }
+    status.hidden = true;
+    button.disabled = true;
+    button.textContent = 'Carregando 3D…';
+    try {
+      await import('https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js');
+      viewer = document.createElement('model-viewer');
+      viewer.setAttribute('alt', `Modelo 3D da embalagem de gelo sabor ${flavor.name}`);
+      viewer.setAttribute('camera-controls', '');
+      viewer.setAttribute('touch-action', 'pan-y');
+      viewer.setAttribute('camera-orbit', '13deg 84deg auto');
+      viewer.setAttribute('interaction-prompt', 'none');
+      viewer.setAttribute('poster', imagePath(flavor));
+      viewer.setAttribute('src', `assets/models/${flavor.id}.glb`);
+      viewer.addEventListener('error', showError, { once: true });
+      container.append(viewer);
+      showModel(true);
+    } catch {
+      showError();
+    } finally {
+      button.disabled = false;
+    }
+  });
 }
