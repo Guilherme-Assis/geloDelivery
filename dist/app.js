@@ -28,9 +28,40 @@ const flavors = [
     summary: 'Tropical e aromático, com acidez marcante.',
     description: 'O aroma tropical e a acidez do maracujá dão personalidade ao drink. É uma boa combinação para bases suaves e bebidas de gengibre.',
     pairings: ['Moscow mule', 'Caipiroska', 'Soda de gengibre']
+  },
+  {
+    id: 'abacaxi', name: 'Abacaxi', color: '#f9d268',
+    summary: 'Tropical e suculento, com acidez de fruta madura.',
+    description: 'O abacaxi combina doçura e acidez. Em bebidas com rum, coco ou gengibre, seu perfil tropical ganha destaque conforme o gelo derrete.',
+    pairings: ['Piña colada', 'Caipirinha de abacaxi', 'Soda de gengibre']
+  },
+  {
+    id: 'melancia', name: 'Melancia', color: '#ff939f',
+    summary: 'Leve, fresco e suavemente doce.',
+    description: 'A melancia traz uma doçura delicada. Experimente com hortelã, limão ou uma base com gás para realçar o frescor.',
+    pairings: ['Gin com hortelã', 'Água com gás e limão', 'Spritz de melancia']
+  },
+  {
+    id: 'uva', name: 'Uva', color: '#c7a4ef',
+    summary: 'Frutado e aromático, com um toque ácido.',
+    description: 'A uva roxa se destaca pelo aroma e pela doçura frutada. Combina com bases neutras e com bebidas cítricas que equilibram o sabor.',
+    pairings: ['Vodca com soda', 'Gin tônica', 'Limonada com gás']
+  },
+  {
+    id: 'coco', name: 'Coco', color: '#b7e8ee',
+    summary: 'Suave e tropical, com aroma delicado de coco.',
+    description: 'O coco traz um sabor suave que combina com frutas tropicais. Experimente em drinks com abacaxi, rum branco ou limão.',
+    pairings: ['Piña colada', 'Batida de coco', 'Água de coco com limão']
+  },
+  {
+    id: 'pessego', name: 'Pêssego', color: '#ffb599',
+    summary: 'Doce e perfumado, com um toque de acidez.',
+    description: 'O pêssego funciona com bases leves e borbulhantes. Seu aroma de fruta madura também combina com chá gelado e limão.',
+    pairings: ['Bellini', 'Chá gelado de limão', 'Spritz de pêssego']
   }
 ];
 
+const featuredFlavors = flavors.slice(0, 5);
 const home = document.querySelector('#home');
 const detail = document.querySelector('#detail');
 const stage = document.querySelector('#showcase');
@@ -42,7 +73,7 @@ const detailPath = flavor => `?sabor=${flavor.id}`;
 
 document.querySelector('#flavor-grid').innerHTML = flavors.map(flavor => `
   <a class="card" href="${detailPath(flavor)}" style="--flavor:${flavor.color}">
-    <div class="card-art"><img src="${imagePath(flavor)}" alt="" decoding="async"></div>
+    <div class="card-art"><img src="${imagePath(flavor)}" alt="" decoding="async" loading="lazy"></div>
     <div class="card-content"><h3>${flavor.name}</h3><p>${flavor.summary}</p>
       <span class="card-link">Ver detalhes <span aria-hidden="true">+</span></span></div>
   </a>`).join('');
@@ -55,18 +86,18 @@ const displayDuration = 5300;
 
 const packageStage = stage.querySelector('.package-stage');
 const firstSlide = packageStage.querySelector('.package-slide');
-const slides = flavors.map((_, index) => {
+const slides = featuredFlavors.map((_, index) => {
   if (index === 0) return firstSlide;
   const slide = firstSlide.cloneNode(true);
   slide.classList.remove('is-active');
   slide.querySelectorAll('img').forEach((image, offset) => {
-    image.src = imagePath(flavors[(index + offset) % flavors.length]);
+    image.src = imagePath(featuredFlavors[(index + offset) % featuredFlavors.length]);
   });
   packageStage.append(slide);
   return slide;
 });
 
-const buttons = flavors.map((flavor, index) => {
+const buttons = featuredFlavors.map((flavor, index) => {
   const button = document.createElement('button');
   button.type = 'button';
   button.title = flavor.name;
@@ -81,7 +112,7 @@ const buttons = flavors.map((flavor, index) => {
 
 function selectFlavor(index) {
   selected = index;
-  const flavor = flavors[index];
+  const flavor = featuredFlavors[index];
   stage.style.setProperty('--flavor', flavor.color);
   currentName.textContent = flavor.name.toLocaleUpperCase('pt-BR');
   slides.forEach((slide, position) => slide.classList.toggle('is-active', index === position));
@@ -99,7 +130,7 @@ function schedule() {
   clearTimeout(timer);
   if (paused || !inView || home.hidden || document.hidden) return;
   timer = setTimeout(() => {
-    selectFlavor((selected + 1) % flavors.length);
+    selectFlavor((selected + 1) % featuredFlavors.length);
     schedule();
   }, displayDuration);
 }
