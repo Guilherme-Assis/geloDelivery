@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "JogGelo",
+    "slug": "joggelo",
+    "version": "1.0.0",
+    "scheme": "joggelo",
+    "orientation": "default",
+    "userInterfaceStyle": "light",
+    "icon": "./assets/joggelo-icon.png",
+    "ios": { "bundleIdentifier": "com.joggelo.app", "supportsTablet": true },
+    "android": { "package": "com.joggelo.app" },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/joggelo-icon.png"
+    }
+  }
+}
