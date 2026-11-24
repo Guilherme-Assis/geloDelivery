@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#071426">
+  <meta name="description" content="Conheça a BRAVIO, uma vitrine de gelos saborizados para drinks.">
+  <title>BRAVIO® — Gelo para drinks</title>
+  <link rel="icon" href="assets/mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <header class="header">
+    <div class="wrap header-inner">
+      <a class="brand" href="./" aria-label="BRAVIO, início"><img src="assets/mark.svg" alt=""><span>BRAVIO<sup>®</sup></span></a>
+      <nav aria-label="Menu principal">
+        <a href="./" id="nav-home">Início</a>
+        <a href="./#sabores" id="nav-flavors">Sabores</a>
+      </nav>
+      <a class="header-cta" href="./#sabores">Explore os sabores <span aria-hidden="true">✳</span></a>
+    </div>
+  </header>
+  <main id="main">
+    <div id="home">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="wrap hero-layout">
+          <div class="hero-copy">
+            <p class="eyebrow"><span></span> GELO SABORIZADO PARA DRINKS</p>
+            <h1 id="hero-title">GELO COM<br><em>ATITUDE.</em></h1>
+            <p class="hero-description">O gelo também faz parte do drink. Dê cor e sabor ao seu copo, da primeira à última gota.</p>
+            <a class="primary" href="#sabores">Conhecer os sabores <span aria-hidden="true">✳</span></a>
+          </div>
+          <div class="showcase" id="showcase">
+            <div class="orbit orbit-outer" aria-hidden="true"></div><div class="orbit orbit-inner" aria-hidden="true"></div>
+            <span class="spark spark-top" aria-hidden="true">✦</span><span class="spark spark-bottom" aria-hidden="true">✧</span>
+            <div class="ice-set" aria-hidden="true">
+              <img class="ice ice-main" id="hero-ice" src="assets/lima.webp" alt="">
+              <img class="ice ice-small-top" src="assets/mirtilo.webp" alt="">
+              <img class="ice ice-small-bottom" src="assets/morango.webp" alt="">
+            </div>
+            <canvas id="ice-canvas" aria-hidden="true"></canvas>
+            <div class="flavor-controls">
+              <div class="flavor-current"><span class="current-dot"></span><span id="current-name">LIMÃO &amp; HORTELÃ</span></div>
+              <div class="selectors" aria-label="Selecionar sabor em destaque"></div>
+              <button class="pause" type="button" aria-label="Pausar rotação" title="Pausar rotação">
+                <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path class="pause-icon" d="M8 6v8m4-8v8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path class="play-icon" d="m8 6 6 4-6 4z" fill="currentColor"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section class="catalog" id="sabores" aria-labelledby="catalog-title">
+        <div class="wrap">
+          <p class="eyebrow"><span></span> ENCONTRE SEU FAVORITO</p>
+          <div class="catalog-heading"><h2 id="catalog-title">Escolha seu sabor<span>.</span></h2><p>Quatro sabores para mudar o clima do seu copo.</p></div>
+          <div class="flavor-grid" id="flavor-grid"></div>
+        </div>
+      </section>
+    </div>
+    <section class="detail wrap" id="detail" hidden></section>
+  </main>
+  <footer><div class="wrap footer-inner"><a class="brand" href="./" aria-label="BRAVIO, início"><img src="assets/mark.svg" alt=""><span>BRAVIO<sup>®</sup></span></a><span>Gelo saborizado para drinks.</span><a href="./#sabores">Todos os sabores</a></div></footer>
+</body>
+</html>
