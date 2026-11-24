@@ -123,7 +123,7 @@ if (requested) {
   detail.hidden = false;
   document.querySelector('#nav-flavors').setAttribute('aria-current', 'true');
   if (flavor) {
-    document.title = `${flavor.name} — BRAVIO®`;
+    document.title = `${flavor.name} — JogGelo`;
     detail.innerHTML = `
       <a class="back" href="./#sabores">Todos os sabores</a>
       <div class="detail-layout" style="--flavor:${flavor.color}">
@@ -144,7 +144,7 @@ if (requested) {
       </div>`;
     setupModel(flavor);
   } else {
-    document.title = 'Sabor não encontrado — BRAVIO®';
+    document.title = 'Sabor não encontrado — JogGelo';
     detail.innerHTML = '<a class="back" href="./#sabores">Todos os sabores</a><h1>Sabor não encontrado</h1>';
   }
 } else {
